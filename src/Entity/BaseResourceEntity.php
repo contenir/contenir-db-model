@@ -3,6 +3,8 @@
 namespace Contenir\Db\Model\Entity;
 
 use Contenir\Metadata\MetadataInterface;
+use DateTimeImmutable;
+use DateTimeInterface;
 
 abstract class BaseResourceEntity extends AbstractEntity implements
     MetadataInterface
@@ -72,13 +74,21 @@ abstract class BaseResourceEntity extends AbstractEntity implements
         return $this->image[0]->path ?? null;
     }
 
-    public function getMetaModified()
+    public function getMetaModified(): ?DateTimeInterface
     {
-        return $this->updated ?? null;
+        if ($this->updated) {
+            return new DateTimeImmutable($this->updated);
+        }
+
+        return null;
     }
 
-    public function getMetaPublish()
+    public function getMetaPublish(): ?DateTimeInterface
     {
-        return $this->created ?? null;
+        if ($this->created) {
+            return new DateTimeImmutable($this->updated);
+        }
+
+        return null;
     }
 }
