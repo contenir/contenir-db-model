@@ -1,1 +1,1 @@
-# contenir-db
+# contenir-db-model
