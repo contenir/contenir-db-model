@@ -6,7 +6,7 @@ use Contenir\Db\Model\Exception\RuntimeException;
 use Laminas\EventManager\EventManager;
 use Laminas\EventManager\EventManagerAwareTrait;
 
-abstract class AbstractEntity implements ResourceInterface
+abstract class AbstractEntity implements EntityInterface
 {
     use EventManagerAwareTrait;
 
