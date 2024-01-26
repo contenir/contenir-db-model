@@ -90,7 +90,7 @@ abstract class AbstractEntity implements EntityInterface
      */
     public function __get($columnName)
     {
-        if (array_key_exists($columnName, $this->relations)) {
+        if (array_key_exists($columnName, $this->relations) && is_null($this->data[$columnName] ?? null)) {
             $this->getEventManager()->trigger('loadRelation', $this, [
                 'relation' => $columnName
             ]);
