@@ -162,7 +162,7 @@ abstract class AbstractRepository implements TableGatewayInterface
             $newPrimaryKeys[$key] = $data[$key] ?? $existing[$key];
         }
 
-        $entity->exchangeArray($this->findOne($newPrimaryKeys)->getArrayCopy());
+        $entity = $this->findOne($newPrimaryKeys);
     }
 
     public function insert(
