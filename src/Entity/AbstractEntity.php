@@ -64,13 +64,7 @@ abstract class AbstractEntity implements EntityInterface
 
     public function __construct()
     {
-        $columns = array_merge(
-            array_values($this->columns),
-            array_keys($this->relations)
-        );
-
-        $this->data               = array_fill_keys($columns, null);
-        $this->modifiedDataFields = array_fill_keys($columns, false);
+        $this->reset();
     }
 
     public function getPrimaryKeys(): array
@@ -84,13 +78,14 @@ abstract class AbstractEntity implements EntityInterface
     /**
      * Retrieve row field value
      *
-     * @param  string $columnName The user-specified column name.
-     * @return string             The corresponding column value.
+     * @param string $columnName The user-specified column name.
+     *
      * @throws Zend_Db_Table_Row_Exception if the $columnName is not a column in the row.
+     * @return string             The corresponding column value.
      */
     public function __get($columnName)
     {
-        if (array_key_exists($columnName, $this->relations)) {
+        if (array_key_exists($columnName, $this->relations) && is_null($this->data[$columnName] ?? null)) {
             $this->getEventManager()->trigger('loadRelation', $this, [
                 'relation' => $columnName
             ]);
@@ -109,16 +104,18 @@ abstract class AbstractEntity implements EntityInterface
     /**
      * Set row field value
      *
-     * @param  string $columnName The column key.
-     * @param  mixed  $value      The value for the property.
-     * @return void
+     * @param string $columnName The column key.
+     * @param mixed  $value      The value for the property.
+     *
      * @throws Zend_Db_Table_Row_Exception
+     * @return void
      */
     public function __set($columnName, $value)
     {
         if (array_key_exists($columnName, $this->data)) {
             $this->modifiedDataFields[$columnName] = ($this->data[$columnName] !== $value);
             $this->data[$columnName]               = $value;
+
             return $this;
         }
 
@@ -128,9 +125,10 @@ abstract class AbstractEntity implements EntityInterface
     /**
      * Unset row field value
      *
-     * @param  string $columnName The column key.
-     * @return Zend_Db_Table_Row_Abstract
+     * @param string $columnName The column key.
+     *
      * @throws Zend_Db_Table_Row_Exception
+     * @return Zend_Db_Table_Row_Abstract
      */
     public function __unset($columnName)
     {
@@ -146,7 +144,8 @@ abstract class AbstractEntity implements EntityInterface
     /**
      * Test existence of row field
      *
-     * @param  string  $columnName   The column key.
+     * @param string $columnName The column key.
+     *
      * @return boolean
      */
     public function __isset($columnName)
@@ -172,8 +171,9 @@ abstract class AbstractEntity implements EntityInterface
     /**
      * Populate Data
      *
-     * @param  array $rowData
-     * @param  bool  $rowExistsInDatabase
+     * @param array $rowData
+     * @param bool  $rowExistsInDatabase
+     *
      * @return self Provides a fluent interface
      */
     public function populate(iterable $rowData): AbstractEntity
@@ -189,10 +189,34 @@ abstract class AbstractEntity implements EntityInterface
 
     /**
      * @param mixed $array
+     *
      * @return self Provides a fluent interface
      */
     public function exchangeArray($array): AbstractEntity
     {
+        return $this->populate($array, true);
+    }
+
+    protected function reset()
+    {
+        $columns = array_merge(
+            array_values($this->columns),
+            array_keys($this->relations)
+        );
+
+        $this->data               = array_fill_keys($columns, null);
+        $this->modifiedDataFields = array_fill_keys($columns, false);
+    }
+
+    /**
+     * @param mixed $array
+     *
+     * @return self Provides a fluent interface
+     */
+    public function synch($array): AbstractEntity
+    {
+        $this->reset();
+
         return $this->populate($array, true);
     }
 
