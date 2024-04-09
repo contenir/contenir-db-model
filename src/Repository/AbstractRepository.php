@@ -12,6 +12,7 @@ use Laminas\Db\Sql;
 use Laminas\Db\ResultSet\ResultSet;
 use Laminas\Db\ResultSet\HydratingResultSet;
 use Laminas\Hydrator\Aggregate\AggregateHydrator;
+use Laminas\Hydrator\HydratorInterface;
 use Laminas\Hydrator\ObjectPropertyHydrator;
 use Laminas\Paginator\Adapter\LaminasDb\DbSelect;
 use Laminas\Db\Exception\RuntimeException;
@@ -91,7 +92,7 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $this->sql;
     }
 
-    public function getResultSet(): ResultSetInterface
+    public function getHydrator(): HydratorInterface
     {
         $relations = $this->entityPrototype->getRelations();
 
@@ -102,7 +103,12 @@ abstract class AbstractRepository implements TableGatewayInterface
             $hydrator->add(new RelationsHydrator($this->repositoryLookup, $relations));
         }
 
-        return new HydratingResultSet($hydrator, clone $this->entityPrototype);
+        return $hydrator;
+    }
+
+    public function getResultSet(): ResultSetInterface
+    {
+        return new HydratingResultSet($this->getHydrator(), clone $this->entityPrototype);
     }
 
     public function select($where = null): Sql\Select
@@ -162,7 +168,7 @@ abstract class AbstractRepository implements TableGatewayInterface
             $newPrimaryKeys[$key] = $data[$key] ?? $existing[$key];
         }
 
-        $entity->exchangeArray($this->findOne($newPrimaryKeys)->getArrayCopy());
+        $this->synch($entity, $newPrimaryKeys);
     }
 
     public function insert(
@@ -318,6 +324,21 @@ abstract class AbstractRepository implements TableGatewayInterface
     public function getLastInsertValue()
     {
         return $this->lastInsertValue;
+    }
+
+    public function synch(AbstractEntity $entity, ?array $primaryKeys = null)
+    {
+        if ($primaryKeys === null) {
+            $primaryKeys = $entity->getPrimaryKeys();
+        }
+        $result = $this->findOne($primaryKeys);
+        if ($result === null) {
+            throw new RuntimeException('No row found');
+        }
+
+        $data = $this->findOne($primaryKeys)->getArrayCopy();
+        $entity->synch($data);
+        $this->getHydrator()->hydrate($data, $entity);
     }
 
     public function findOne($where = null, $order = null, Sql\Select $select = null)
