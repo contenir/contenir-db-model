@@ -15,7 +15,7 @@ class RepositoryLookup
     /**
      * @var
      */
-    protected ContainerInterface $container = null;
+    protected ?ContainerInterface $container;
 
     /**
      * @var AbstractEntity
