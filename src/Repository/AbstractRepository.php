@@ -34,14 +34,19 @@ abstract class AbstractRepository implements TableGatewayInterface
     protected Adapter $adapter;
 
     /**
-     * @var
+     * @var Sql
+     */
+    protected Sql\Sql $sql;
+
+    /**
+     * @var AbstractEntity
      */
     protected AbstractEntity $entityPrototype;
 
     /**
-     * @var Sql
+     * @var RepositoryLookup
      */
-    protected Sql\Sql $sql;
+    protected RepositoryLookup $repositoryLookup;
 
     /**
      * List of abstract relation fields
