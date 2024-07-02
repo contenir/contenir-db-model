@@ -3,6 +3,7 @@
 namespace Contenir\Db\Model\Repository;
 
 use Contenir\Db\Model\Entity\AbstractEntity;
+use Psr\Container\ContainerInterface;
 
 class RepositoryLookup
 {
@@ -12,16 +13,21 @@ class RepositoryLookup
     protected $entityPrototype = null;
 
     /**
+     * @var
+     */
+    protected ContainerInterface $container = null;
+
+    /**
      * @var AbstractEntity
      */
     protected $entityRelations = [];
 
-    public function __construct($container)
+    public function __construct(ContainerInterface $container)
     {
         $this->container = $container;
     }
 
-    public function getContainer()
+    public function getContainer(): ?ContainerInterface
     {
         return $this->container;
     }
