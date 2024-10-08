@@ -62,7 +62,7 @@ abstract class AbstractEntity implements EntityInterface
      */
     protected $hydratorClass = EntityHydrator::class;
 
-    public function __construct()
+    public function __construct(iterable $data = [])
     {
         $this->reset();
     }
@@ -169,6 +169,16 @@ abstract class AbstractEntity implements EntityInterface
     }
 
     /**
+     * @param mixed $array
+     *
+     * @return self Provides a fluent interface
+     */
+    public function exchangeArray($array): AbstractEntity
+    {
+        return $this->populate($array, true);
+    }
+
+    /**
      * Populate Data
      *
      * @param array $rowData
@@ -188,13 +198,15 @@ abstract class AbstractEntity implements EntityInterface
     }
 
     /**
-     * @param mixed $array
+     * Test existence of row field
      *
-     * @return self Provides a fluent interface
+     * @param string $columnName The column key.
+     *
+     * @return boolean
      */
-    public function exchangeArray($array): AbstractEntity
+    public function __isset($columnName)
     {
-        return $this->populate($array, true);
+        return array_key_exists($columnName, $this->data);
     }
 
     protected function reset()

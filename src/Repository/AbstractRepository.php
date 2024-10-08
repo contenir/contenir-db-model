@@ -3,10 +3,12 @@
 namespace Contenir\Db\Model\Repository;
 
 use Contenir\Db\Model\Entity\AbstractEntity;
+use Contenir\Db\Model\Entity\EntityInterface;
 use Contenir\Db\Model\Hydrator\RelationsHydrator;
 use Contenir\Db\Model\Repository\RepositoryLookup;
 use Laminas\Db\Adapter\Adapter;
-use Laminas\Db\TableGateway\TableGatewayInterface;
+use Laminas\Db\Exception\RuntimeException;
+use Laminas\Db\ResultSet\HydratingResultSet;
 use Laminas\Db\ResultSet\ResultSetInterface;
 use Laminas\Db\Sql;
 use Laminas\Db\ResultSet\ResultSet;
@@ -34,14 +36,14 @@ abstract class AbstractRepository implements TableGatewayInterface
     protected Adapter $adapter;
 
     /**
-     * @var Sql
+     * @var Sql\Sql
      */
     protected Sql\Sql $sql;
 
     /**
      * @var AbstractEntity
      */
-    protected AbstractEntity $entityPrototype;
+    protected EntityInterface $entityPrototype;
 
     /**
      * @var RepositoryLookup
@@ -113,31 +115,22 @@ abstract class AbstractRepository implements TableGatewayInterface
 
     public function getResultSet(): ResultSetInterface
     {
-        return new HydratingResultSet($this->getHydrator(), clone $this->entityPrototype);
+        $relations = $this->entityPrototype->getRelations();
+
+        $hydrator = new AggregateHydrator();
+        $hydrator->add(new ObjectPropertyHydrator());
+
+        if (count($relations)) {
+            $hydrator->add(new RelationsHydrator($this->repositoryLookup, $relations));
+        }
+
+        return new HydratingResultSet($hydrator, clone $this->entityPrototype);
     }
 
-    public function select($where = null): Sql\Select
-    {
-        return $this->sql->select();
-    }
-
-    public function selectWith(Sql\Select $select)
-    {
-        $statement = $this->sql->prepareStatementForSqlObject($select);
-        $result    = $statement->execute();
-
-        /** @var Laminas\Db\ResultSet\ResultSet $resultSet */
-        $resultSet = $this->getResultSet();
-        $resultSet->initialize($result);
-        $resultSet->buffer();
-
-        return $resultSet;
-    }
-
-    public function create($values = [])
+    public function create(iterable $data = []): EntityInterface
     {
         $row = clone $this->entityPrototype;
-        $row->exchangeArray($values);
+        $row->exchangeArray($data);
 
         return $row;
     }
@@ -173,7 +166,7 @@ abstract class AbstractRepository implements TableGatewayInterface
             $newPrimaryKeys[$key] = $data[$key] ?? $existing[$key];
         }
 
-        $this->synch($entity, $newPrimaryKeys);
+        $entity->exchangeArray($this->findOne($newPrimaryKeys)->getArrayCopy());
     }
 
     public function insert(
@@ -186,11 +179,37 @@ abstract class AbstractRepository implements TableGatewayInterface
     }
 
     /**
+     * Get last insert value
+     *
+     * @return int
+     */
+    public function getLastInsertValue()
+    {
+        return $this->lastInsertValue;
+    }
+
+    public function synch(AbstractEntity $entity, ?array $primaryKeys = null)
+    {
+        if ($primaryKeys === null) {
+            $primaryKeys = $entity->getPrimaryKeys();
+        }
+        $result = $this->findOne($primaryKeys);
+        if ($result === null) {
+            throw new RuntimeException('No row found');
+        }
+
+        $data = $this->findOne($primaryKeys)->getArrayCopy();
+        $entity->synch($data);
+        $this->getHydrator()->hydrate($data, $entity);
+    }
+
+    /**
+     * @param Insert $insert
+     *
+     * @throws Exception\RuntimeException
+     * @return int
      * @todo add $columns support
      *
-     * @param Insert $insert
-     * @return int
-     * @throws Exception\RuntimeException
      */
     protected function executeInsert(Sql\Insert $insert)
     {
@@ -242,11 +261,12 @@ abstract class AbstractRepository implements TableGatewayInterface
     }
 
     /**
+     * @param Update $update
+     *
+     * @throws Exception\RuntimeException
+     * @return int
      * @todo add $columns support
      *
-     * @param Update $update
-     * @return int
-     * @throws Exception\RuntimeException
      */
     protected function executeUpdate(Sql\Update $update)
     {
@@ -276,6 +296,24 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $result->getAffectedRows();
     }
 
+    public function select($where = null): Sql\Select
+    {
+        return $this->sql->select();
+    }
+
+    public function selectWith(Sql\Select $select)
+    {
+        $statement = $this->sql->prepareStatementForSqlObject($select);
+        $result    = $statement->execute();
+
+        /** @var Laminas\Db\ResultSet\ResultSet $resultSet */
+        $resultSet = $this->getResultSet();
+        $resultSet->initialize($result);
+        $resultSet->buffer();
+
+        return $resultSet;
+    }
+
     public function delete($where): int
     {
         $delete = $this->sql->delete();
@@ -284,15 +322,17 @@ abstract class AbstractRepository implements TableGatewayInterface
         } else {
             $delete->where($where);
         }
+
         return $this->executeDelete($delete);
     }
 
     /**
+     * @param Delete $delete
+     *
+     * @throws Exception\RuntimeException
+     * @return int
      * @todo add $columns support
      *
-     * @param Delete $delete
-     * @return int
-     * @throws Exception\RuntimeException
      */
     protected function executeDelete(Sql\Delete $delete)
     {
@@ -319,31 +359,6 @@ abstract class AbstractRepository implements TableGatewayInterface
         }
 
         return $result->getAffectedRows();
-    }
-
-    /**
-     * Get last insert value
-     *
-     * @return int
-     */
-    public function getLastInsertValue()
-    {
-        return $this->lastInsertValue;
-    }
-
-    public function synch(AbstractEntity $entity, ?array $primaryKeys = null)
-    {
-        if ($primaryKeys === null) {
-            $primaryKeys = $entity->getPrimaryKeys();
-        }
-        $result = $this->findOne($primaryKeys);
-        if ($result === null) {
-            throw new RuntimeException('No row found');
-        }
-
-        $data = $this->findOne($primaryKeys)->getArrayCopy();
-        $entity->synch($data);
-        $this->getHydrator()->hydrate($data, $entity);
     }
 
     public function findOne($where = null, $order = null, Sql\Select $select = null)
