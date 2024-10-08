@@ -12,6 +12,7 @@ use Laminas\Db\ResultSet\HydratingResultSet;
 use Laminas\Db\ResultSet\ResultSetInterface;
 use Laminas\Db\Sql;
 use Laminas\Db\ResultSet\ResultSet;
+use Laminas\Db\TableGateway\TableGatewayInterface;
 use Laminas\Hydrator\Aggregate\AggregateHydrator;
 use Laminas\Hydrator\HydratorInterface;
 use Laminas\Hydrator\ObjectPropertyHydrator;
