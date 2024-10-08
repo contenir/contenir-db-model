@@ -197,18 +197,6 @@ abstract class AbstractEntity implements EntityInterface
         return $this;
     }
 
-    /**
-     * Test existence of row field
-     *
-     * @param string $columnName The column key.
-     *
-     * @return boolean
-     */
-    public function __isset($columnName)
-    {
-        return array_key_exists($columnName, $this->data);
-    }
-
     protected function reset()
     {
         $columns = array_merge(
