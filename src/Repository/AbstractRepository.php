@@ -12,12 +12,10 @@ use Laminas\Db\ResultSet\HydratingResultSet;
 use Laminas\Db\ResultSet\ResultSetInterface;
 use Laminas\Db\Sql;
 use Laminas\Db\ResultSet\ResultSet;
-use Laminas\Db\ResultSet\HydratingResultSet;
 use Laminas\Hydrator\Aggregate\AggregateHydrator;
 use Laminas\Hydrator\HydratorInterface;
 use Laminas\Hydrator\ObjectPropertyHydrator;
 use Laminas\Paginator\Adapter\LaminasDb\DbSelect;
-use Laminas\Db\Exception\RuntimeException;
 
 abstract class AbstractRepository implements TableGatewayInterface
 {
