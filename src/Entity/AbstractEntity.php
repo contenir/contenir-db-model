@@ -65,6 +65,7 @@ abstract class AbstractEntity implements EntityInterface
     public function __construct(iterable $data = [])
     {
         $this->reset();
+        $this->populate($data);
     }
 
     public function getPrimaryKeys(): array
