@@ -11,7 +11,6 @@ declare(strict_types=1);
 namespace Contenir\Db\Model\Repository\Factory;
 
 use Contenir\Db\Model\Repository\RepositoryLookup;
-use Laminas\Db\Adapter\Adapter;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 use Psr\Container\ContainerInterface;
 

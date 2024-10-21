@@ -9,5 +9,5 @@ interface EntityInterface
      *
      * @return array
      */
-    public function getPrimaryKeys();
+    public function getPrimaryKeys(): array;
 }

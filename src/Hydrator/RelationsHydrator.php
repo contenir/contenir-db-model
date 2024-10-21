@@ -7,20 +7,40 @@ namespace Contenir\Db\Model\Hydrator;
 use Contenir\Db\Model\Entity\AbstractEntity;
 use Contenir\Db\Model\Exception\InvalidArgumentException;
 use Contenir\Db\Model\Exception\RuntimeException;
+use Contenir\Db\Model\Repository\RepositoryLookup;
 use Laminas\Hydrator\ObjectPropertyHydrator;
+use Psr\Container\ContainerExceptionInterface;
+use Psr\Container\NotFoundExceptionInterface;
 
+/**
+ *
+ */
 class RelationsHydrator extends ObjectPropertyHydrator
 {
-    protected $container;
-    protected $relations;
+    /**
+     * @var RepositoryLookup
+     */
+    protected RepositoryLookup $repositoryLookup;
+    /**
+     * @var array
+     */
+    protected array $relations;
 
-    public function __construct($container, array $relations)
+    /**
+     * @param RepositoryLookup $repositoryLookup
+     * @param array            $relations
+     */
+    public function __construct(RepositoryLookup $repositoryLookup, array $relations)
     {
-        $this->container = $container;
-        $this->relations = $relations;
+        $this->repositoryLookup = $repositoryLookup;
+        $this->relations        = $relations;
     }
 
-    public function hydrate($data, $object)
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
+    public function hydrate($data, $object): object
     {
         $object->getEventManager()->attach('loadRelation', function ($e) {
             $target = $e->getTarget();
@@ -28,13 +48,18 @@ class RelationsHydrator extends ObjectPropertyHydrator
 
             $relationName = $params['relation'];
             if (array_key_exists($relationName, $this->relations)) {
-                $target->{$relationName} = $this->fetchRelation($this->relations[$relationName], $target->getArrayCopy());
+                $target->{$relationName} = $this->fetchRelation($this->relations[$relationName],
+                    $target->getArrayCopy());
             }
         });
 
         return $object;
     }
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
     protected function fetchRelation(
         $relationConfig,
         $data = []
@@ -49,12 +74,11 @@ class RelationsHydrator extends ObjectPropertyHydrator
         $relationOrder       = $relationDefinition['relationOrder'];
 
         $lookup       = array_combine($relationTableColumn, $relationColumn);
-        $tableGateway = $this->container->getContainer()->get($relationTableClass);
+        $tableGateway = $this->repositoryLookup->getContainer()->get($relationTableClass);
 
-        $rows     = [];
-        $where    = [];
-        $joinFrom = null;
-        $joinTo   = null;
+        $rows   = [];
+        $where  = [];
+        $joinTo = null;
 
         if (! empty($relationVia)) {
             $joinFrom = $tableGateway->getTable();
@@ -103,17 +127,14 @@ class RelationsHydrator extends ObjectPropertyHydrator
             }
 
             $tableGateway->prepareSelect($select, null, $relationOrder);
+            $results = $tableGateway->selectWith($select);
 
             switch ($relationType) {
                 case AbstractEntity::RELATION_SINGLE:
-                    $results = $tableGateway->selectWith($select);
-                    $rows    = $results->current();
+                    $rows = $results->current();
                     break;
 
                 default:
-                    $results = $tableGateway->selectWith($select);
-                    $rows    = [];
-
                     foreach ($results as $row) {
                         $rows[] = $row;
                     }
@@ -124,12 +145,17 @@ class RelationsHydrator extends ObjectPropertyHydrator
         return $rows;
     }
 
+    /**
+     * @param array $relationDefinition
+     *
+     * @return array
+     */
     protected function getRelationDefinition(array $relationDefinition): array
     {
         if (! isset($relationDefinition['column'])) {
             throw new InvalidArgumentException('Relation column is not set');
         }
-        $relationColumn = (array) $relationDefinition['column'];
+        $relationColumn = (array)$relationDefinition['column'];
 
         if (! isset($relationDefinition['table'])) {
             throw new RuntimeException('Relation table data is not set');
@@ -143,11 +169,11 @@ class RelationsHydrator extends ObjectPropertyHydrator
         $relationType        = $relationDefinition['type'] ?? AbstractEntity::RELATION_MANY;
         $relationTableClass  = $relationTable['class'];
         $relationTableColumn = $relationTable['column'] ?? $relationColumn;
-        $relationTableColumn = (array) $relationTableColumn;
+        $relationTableColumn = (array)$relationTableColumn;
 
         $where = $relationDefinition['where'] ?? [];
         $order = $relationDefinition['order'] ?? [];
-        $via   = $relationDefinition['via']   ?? [];
+        $via   = $relationDefinition['via'] ?? [];
         if (! empty($via)) {
             if (! is_string($via['table'])) {
                 throw new InvalidArgumentException('Via table is not set');
@@ -162,10 +188,10 @@ class RelationsHydrator extends ObjectPropertyHydrator
             'relationType'        => $relationType,
             'relationColumn'      => $relationColumn,
             'relationTableClass'  => $relationTableClass,
-            'relationTableColumn' => (array) $relationTableColumn,
-            'relationVia'         => (array) $via,
-            'relationCondition'   => (array) $where,
-            'relationOrder'       => (array) $order
+            'relationTableColumn' => $relationTableColumn,
+            'relationVia'         => (array)$via,
+            'relationCondition'   => (array)$where,
+            'relationOrder'       => (array)$order
         ];
     }
 }

@@ -5,14 +5,15 @@ namespace Contenir\Db\Model\Entity;
 use Contenir\Metadata\MetadataInterface;
 use DateTimeImmutable;
 use DateTimeInterface;
+use Exception;
 
 abstract class BaseResourceEntity extends AbstractEntity implements
     MetadataInterface
 {
-    protected $routeId;
-    protected $routePath;
+    protected string $routeId;
+    protected string $routePath;
 
-    public function getResourceId()
+    public function getResourceId(): string
     {
         return 'resource';
     }
@@ -47,14 +48,14 @@ abstract class BaseResourceEntity extends AbstractEntity implements
     public function getRoutePath(): string
     {
         if ($this->routePath === null) {
-            $parts           = explode('/', (string) $this->slug);
+            $parts           = explode('/', $this->slug);
             $this->routePath = sprintf('/%s', join('/', array_filter($parts)));
         }
 
         return $this->routePath;
     }
 
-    public function getMetaTitle()
+    public function getMetaTitle(): string
     {
         $fallbackTitle = join(' ', array_filter([
             $this->title ?? null,
@@ -64,7 +65,7 @@ abstract class BaseResourceEntity extends AbstractEntity implements
         return $this->meta_title ?? $fallbackTitle;
     }
 
-    public function getMetaDescription()
+    public function getMetaDescription(): ?string
     {
         return $this->meta_description ?? $this->description ?? null;
     }
@@ -74,6 +75,9 @@ abstract class BaseResourceEntity extends AbstractEntity implements
         return $this->image[0]->path ?? null;
     }
 
+    /**
+     * @throws Exception
+     */
     public function getMetaModified(): ?DateTimeInterface
     {
         if ($this->updated) {
@@ -83,6 +87,9 @@ abstract class BaseResourceEntity extends AbstractEntity implements
         return null;
     }
 
+    /**
+     * @throws Exception
+     */
     public function getMetaPublish(): ?DateTimeInterface
     {
         if ($this->created) {

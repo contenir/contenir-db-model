@@ -8,19 +8,19 @@ use Psr\Container\ContainerInterface;
 class RepositoryLookup
 {
     /**
-     * @var AbstractEntity
+     * @var AbstractEntity|null
      */
-    protected $entityPrototype = null;
+    protected ?AbstractEntity $entityPrototype = null;
 
     /**
-     * @var
+     * @var ContainerInterface|null
      */
     protected ?ContainerInterface $container;
 
     /**
-     * @var AbstractEntity
+     * @var array
      */
-    protected $entityRelations = [];
+    protected array $entityRelations = [];
 
     public function __construct(ContainerInterface $container)
     {

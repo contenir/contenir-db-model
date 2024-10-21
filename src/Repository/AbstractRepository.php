@@ -2,21 +2,24 @@
 
 namespace Contenir\Db\Model\Repository;
 
+use ArrayObject;
+use Closure;
 use Contenir\Db\Model\Entity\AbstractEntity;
 use Contenir\Db\Model\Entity\EntityInterface;
 use Contenir\Db\Model\Hydrator\RelationsHydrator;
-use Contenir\Db\Model\Repository\RepositoryLookup;
 use Laminas\Db\Adapter\Adapter;
 use Laminas\Db\Exception\RuntimeException;
 use Laminas\Db\ResultSet\HydratingResultSet;
 use Laminas\Db\ResultSet\ResultSetInterface;
 use Laminas\Db\Sql;
-use Laminas\Db\ResultSet\ResultSet;
+use Laminas\Db\Sql\Delete;
+use Laminas\Db\Sql\Insert;
+use Laminas\Db\Sql\TableIdentifier;
+use Laminas\Db\Sql\Update;
 use Laminas\Db\TableGateway\TableGatewayInterface;
 use Laminas\Hydrator\Aggregate\AggregateHydrator;
 use Laminas\Hydrator\HydratorInterface;
 use Laminas\Hydrator\ObjectPropertyHydrator;
-use Laminas\Paginator\Adapter\LaminasDb\DbSelect;
 
 abstract class AbstractRepository implements TableGatewayInterface
 {
@@ -25,9 +28,9 @@ abstract class AbstractRepository implements TableGatewayInterface
     public const MODE_UPDATE = 'update';
 
     /**
-     * @var string|array|TableIdentifier
+     * @var string|array|TableIdentifier|null
      */
-    protected $table = null;
+    protected TableIdentifier|string|array|null $table = null;
 
     /**
      * @var Adapter
@@ -50,27 +53,20 @@ abstract class AbstractRepository implements TableGatewayInterface
     protected RepositoryLookup $repositoryLookup;
 
     /**
-     * List of abstract relation fields
-     */
-    protected $entityRelations = null;
-
-    /**
      * List of default where conditions
      */
-    protected $where = [
-    ];
+    protected array $where = [];
 
     /**
      * List of default sort order
      */
-    protected $order = [
-    ];
+    protected array $order = [];
 
     /**
      *
-     * @var int
+     * @var int|null
      */
-    protected $lastInsertValue = null;
+    protected ?int $lastInsertValue = null;
 
     public function __construct(
         Adapter $adapter,
@@ -93,7 +89,7 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $this->adapter;
     }
 
-    public function getSql()
+    public function getSql(): Sql\Sql
     {
         return $this->sql;
     }
@@ -134,7 +130,7 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $row;
     }
 
-    public function save($entity, $mode = self::MODE_AUTO)
+    public function save($entity, $mode = self::MODE_AUTO): void
     {
         $data     = $entity->getModifiedArrayCopy();
         $existing = $entity->getArrayCopy();
@@ -180,14 +176,14 @@ abstract class AbstractRepository implements TableGatewayInterface
     /**
      * Get last insert value
      *
-     * @return int
+     * @return int|null
      */
-    public function getLastInsertValue()
+    public function getLastInsertValue(): ?int
     {
         return $this->lastInsertValue;
     }
 
-    public function synch(AbstractEntity $entity, ?array $primaryKeys = null)
+    public function synch(AbstractEntity $entity, ?array $primaryKeys = null): void
     {
         if ($primaryKeys === null) {
             $primaryKeys = $entity->getPrimaryKeys();
@@ -205,12 +201,12 @@ abstract class AbstractRepository implements TableGatewayInterface
     /**
      * @param Insert $insert
      *
-     * @throws Exception\RuntimeException
+     * @throws RuntimeException
      * @return int
      * @todo add $columns support
      *
      */
-    protected function executeInsert(Sql\Insert $insert)
+    protected function executeInsert(Sql\Insert $insert): int
     {
         $insertState = $insert->getRawState();
         if ($insertState['table'] != $this->table) {
@@ -251,7 +247,7 @@ abstract class AbstractRepository implements TableGatewayInterface
 
         if ($joins) {
             foreach ($joins as $join) {
-                $type = isset($join['type']) ? $join['type'] : Sql\Select::JOIN_INNER;
+                $type = $join['type'] ?? Sql\Select::JOIN_INNER;
                 $update->join($join['name'], $join['on'], $type);
             }
         }
@@ -262,12 +258,12 @@ abstract class AbstractRepository implements TableGatewayInterface
     /**
      * @param Update $update
      *
-     * @throws Exception\RuntimeException
+     * @throws RuntimeException
      * @return int
      * @todo add $columns support
      *
      */
-    protected function executeUpdate(Sql\Update $update)
+    protected function executeUpdate(Sql\Update $update): int
     {
         $updateState = $update->getRawState();
         if ($updateState['table'] != $this->table) {
@@ -300,12 +296,11 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $this->sql->select();
     }
 
-    public function selectWith(Sql\Select $select)
+    public function selectWith(Sql\Select $select): ResultSetInterface
     {
         $statement = $this->sql->prepareStatementForSqlObject($select);
         $result    = $statement->execute();
 
-        /** @var Laminas\Db\ResultSet\ResultSet $resultSet */
         $resultSet = $this->getResultSet();
         $resultSet->initialize($result);
         $resultSet->buffer();
@@ -316,7 +311,7 @@ abstract class AbstractRepository implements TableGatewayInterface
     public function delete($where): int
     {
         $delete = $this->sql->delete();
-        if ($where instanceof \Closure) {
+        if ($where instanceof Closure) {
             $where($delete);
         } else {
             $delete->where($where);
@@ -328,12 +323,12 @@ abstract class AbstractRepository implements TableGatewayInterface
     /**
      * @param Delete $delete
      *
-     * @throws Exception\RuntimeException
+     * @throws RuntimeException
      * @return int
      * @todo add $columns support
      *
      */
-    protected function executeDelete(Sql\Delete $delete)
+    protected function executeDelete(Sql\Delete $delete): int
     {
         $deleteState = $delete->getRawState();
         if ($deleteState['table'] != $this->table) {
@@ -360,12 +355,12 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $result->getAffectedRows();
     }
 
-    public function findOne($where = null, $order = null, Sql\Select $select = null)
+    public function findOne($where = null, $order = null, Sql\Select $select = null): ArrayObject|array|null
     {
         return $this->find($where, $order, $select)->current();
     }
 
-    public function find($where = null, $order = null, Sql\Select $select = null)
+    public function find($where = null, $order = null, Sql\Select $select = null): ResultSetInterface
     {
         if ($select === null) {
             $select = $this->select();
@@ -376,12 +371,12 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $this->selectWith($select);
     }
 
-    public function findOneByField($fieldName, $value)
+    public function findOneByField($fieldName, $value): EntityInterface|ArrayObject|array|null
     {
         return $this->findByField($fieldName, $value)->current();
     }
 
-    public function findByField($fieldName, $value, $where = [], $order = null, $select = null)
+    public function findByField($fieldName, $value, $where = [], $order = null, $select = null): ResultSetInterface
     {
         if ($select === null) {
             $select = $this->select();
@@ -389,7 +384,7 @@ abstract class AbstractRepository implements TableGatewayInterface
 
         $select->where([$fieldName => $value]);
 
-        if ($where instanceof \Closure) {
+        if ($where instanceof Closure) {
             $where($select);
         } elseif ($where !== null) {
             $select->where($where);
@@ -402,7 +397,7 @@ abstract class AbstractRepository implements TableGatewayInterface
         Sql\Select $select = null,
         $where = [],
         $order = []
-    ) {
+    ): ?Sql\Select {
         if ($select === null) {
             $select = $this->select();
         }
