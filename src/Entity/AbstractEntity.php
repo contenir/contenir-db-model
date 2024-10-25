@@ -56,13 +56,6 @@ abstract class AbstractEntity implements EntityInterface
      */
     protected $events;
 
-    /**
-     * Hydrator class for populating row
-     *
-     * @var string
-     */
-    protected string $hydratorClass = EntityHydrator::class;
-
     public function __construct(iterable $data = [])
     {
         $this->reset();
@@ -82,7 +75,7 @@ abstract class AbstractEntity implements EntityInterface
      *
      * @param string $columnName The user-specified column name.
      *
-     * @throws Zend_Db_Table_Row_Exception if the $columnName is not a column in the row.
+     * @throws RuntimeException if the $columnName is not a column in the row.
      * @return string             The corresponding column value.
      */
     public function __get(string $columnName)
@@ -249,15 +242,5 @@ abstract class AbstractEntity implements EntityInterface
     public function getRelations(): array
     {
         return $this->relations;
-    }
-
-    /**
-     * Return a new instance of the row hydrator
-     *
-     * @return object
-     */
-    public function getHydrator(): object
-    {
-        return new $this->hydratorClass();
     }
 }

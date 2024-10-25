@@ -355,7 +355,7 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $result->getAffectedRows();
     }
 
-    public function findOne($where = null, $order = null, Sql\Select $select = null): EntityInterface|ArrayObject|array|null
+    public function findOne($where = null, $order = null, Sql\Select $select = null): ?EntityInterface
     {
         return $this->find($where, $order, $select)->current();
     }

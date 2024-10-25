@@ -14,7 +14,10 @@
         "source": "https://github.com/contenir/contenir-db-model"
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
     },
     "extra": {
         "laminas": {
@@ -30,17 +33,12 @@
         "laminas/laminas-mvc": "^3.0"
     },
     "require-dev": {
-        "laminas/laminas-coding-standard": "~1.0.0",
+        "laminas/laminas-coding-standard": "~3.0.0",
         "phpunit/phpunit": "^9.3"
     },
     "autoload": {
         "psr-4": {
             "Contenir\\Db\\Model\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Contenir\\Db\\Model\\": "test/"
         }
     },
     "scripts": {
