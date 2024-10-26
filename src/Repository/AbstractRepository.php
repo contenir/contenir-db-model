@@ -122,13 +122,7 @@ abstract class AbstractRepository implements TableGatewayInterface
         return new HydratingResultSet($hydrator, clone $this->entityPrototype);
     }
 
-    public function create(iterable $data = []): EntityInterface
-    {
-        $row = clone $this->entityPrototype;
-        $row->exchangeArray($data);
-
-        return $row;
-    }
+    abstract public function create(iterable $data = []): EntityInterface;
 
     public function save($entity, $mode = self::MODE_AUTO): void
     {
@@ -355,9 +349,11 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $result->getAffectedRows();
     }
 
-    public function findOne($where = null, $order = null, Sql\Select $select = null): ?EntityInterface
+    abstract public function findOne($where = null, $order = null, Sql\Select $select = null): ?EntityInterface;
+
+    public function findOneByField($fieldName, $value): EntityInterface|ArrayObject|array|null
     {
-        return $this->find($where, $order, $select)->current();
+        return $this->findByField($fieldName, $value)->current();
     }
 
     public function find($where = null, $order = null, Sql\Select $select = null): ResultSetInterface
@@ -369,11 +365,6 @@ abstract class AbstractRepository implements TableGatewayInterface
         $this->prepareSelect($select, $where, $order);
 
         return $this->selectWith($select);
-    }
-
-    public function findOneByField($fieldName, $value): EntityInterface|ArrayObject|array|null
-    {
-        return $this->findByField($fieldName, $value)->current();
     }
 
     public function findByField($fieldName, $value, $where = [], $order = null, $select = null): ResultSetInterface
