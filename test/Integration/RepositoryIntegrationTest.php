@@ -246,6 +246,17 @@ class RepositoryIntegrationTest extends IntegrationTestCase
         $this->assertSame(250, (int) $rows[0]->total);
     }
 
+    public function testFindByFieldAcceptsClosureExtraConditions(): void
+    {
+        $result = $this->orders->findByField('user_id', 1, static function ($select): void {
+            $select->where(['total > ?' => 200]);
+        });
+
+        $rows = iterator_to_array($result);
+        $this->assertCount(1, $rows);
+        $this->assertSame(250, (int) $rows[0]->total);
+    }
+
     public function testRepositoryWhereDefaultIsApplied(): void
     {
         // exercise prepareSelect's $this->where branch

@@ -381,7 +381,7 @@ abstract class AbstractRepository implements TableGatewayInterface
             $select->where($where);
         }
 
-        return $this->find($where, $order, $select);
+        return $this->find(null, $order, $select);
     }
 
     public function prepareSelect(
