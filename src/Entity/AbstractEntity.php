@@ -1,11 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Contenir\Db\Model\Entity;
 
 use Contenir\Db\Model\Exception\RuntimeException;
 use InvalidArgumentException;
 use Laminas\EventManager\EventManager;
 use Laminas\EventManager\EventManagerAwareTrait;
+use Laminas\EventManager\EventManagerInterface;
+
+use function array_combine;
+use function array_diff_key;
+use function array_fill_keys;
+use function array_filter;
+use function array_intersect;
+use function array_intersect_key;
+use function array_key_exists;
+use function array_keys;
+use function array_merge;
+use function array_values;
+use function implode;
+use function sprintf;
 
 abstract class AbstractEntity implements EntityInterface
 {
@@ -16,38 +32,36 @@ abstract class AbstractEntity implements EntityInterface
 
     /**
      * Primary Keys for table
-     *
-     * @var array
      */
     protected array $primaryKeys = [];
 
     /**
      * List of table columns
-     *
-     * @var array
      */
     protected array $columns = [];
 
     /**
      * Table row data
-     *
-     * @var array
      */
     protected array $data = [];
 
     /**
      * Indicates if table row data has been modified programmatically
-     *
-     * @var array
      */
     protected array $modifiedDataFields = [];
 
     /**
      * Lookup for table relations
-     *
-     * @var array
      */
     protected array $relations = [];
+
+    /**
+     * Optional name of an integer / numeric column used for optimistic
+     * concurrency control. When set, repository UPDATEs use the column's
+     * current value as part of the WHERE predicate and bump it through
+     * {@see self::nextVersion()} on each successful write.
+     */
+    protected ?string $versionColumn = null;
 
     /**
      * EventsManager
@@ -58,31 +72,54 @@ abstract class AbstractEntity implements EntityInterface
 
     public function __construct(iterable $data = [])
     {
+        $collisions = array_intersect($this->columns, array_keys($this->relations));
+        if ($collisions !== []) {
+            throw new InvalidArgumentException(sprintf(
+                'Entity columns and relations must not share names; got: %s',
+                implode(', ', $collisions)
+            ));
+        }
+
         $this->reset();
         $this->populate($data);
     }
 
+    /**
+     * Lazily provide an EventManager so accessing a relation never crashes
+     * on a freshly-instantiated entity that hasn't been hydrated through a
+     * repository.
+     */
+    public function getEventManager(): EventManagerInterface
+    {
+        if ($this->events === null) {
+            $this->setEventManager(new EventManager());
+        }
+
+        return $this->events;
+    }
+
     public function getPrimaryKeys(): array
     {
-        return array_intersect_key(
-            $this->data,
-            array_combine($this->primaryKeys, $this->primaryKeys)
-        );
+        $result = [];
+        foreach ($this->primaryKeys as $key) {
+            $result[$key] = $this->data[$key] ?? null;
+        }
+
+        return $result;
     }
 
     /**
      * Retrieve row field value
      *
      * @param string $columnName The user-specified column name.
-     *
-     * @throws RuntimeException if the $columnName is not a column in the row.
-     * @return string             The corresponding column value.
+     * @return mixed              The corresponding column value.
+     * @throws RuntimeException If the $columnName is not a column in the row.
      */
     public function __get(string $columnName)
     {
-        if (array_key_exists($columnName, $this->relations) && is_null($this->data[$columnName] ?? null)) {
+        if (array_key_exists($columnName, $this->relations) && ($this->data[$columnName] ?? null) === null) {
             $this->getEventManager()->trigger('loadRelation', $this, [
-                'relation' => $columnName
+                'relation' => $columnName,
             ]);
         }
 
@@ -101,13 +138,11 @@ abstract class AbstractEntity implements EntityInterface
      *
      * @param string $columnName The column key.
      * @param mixed  $value      The value for the property.
-     *
-     * @return void
      */
     public function __set(string $columnName, mixed $value): void
     {
         if (array_key_exists($columnName, $this->data)) {
-            $this->modifiedDataFields[$columnName] = ($this->data[$columnName] !== $value);
+            $this->modifiedDataFields[$columnName] = $this->data[$columnName] !== $value;
             $this->data[$columnName]               = $value;
         }
     }
@@ -116,23 +151,20 @@ abstract class AbstractEntity implements EntityInterface
      * Unset row field value
      *
      * @param string $columnName The column key.
-     *
-     * @return void
      */
     public function __unset(string $columnName): void
     {
-        if (! array_key_exists($columnName, $this->columns)) {
+        if (! array_key_exists($columnName, $this->data)) {
             throw new InvalidArgumentException("Specified column \"$columnName\" is not in the row");
         }
 
-        unset($this->data[$columnName]);
+        unset($this->data[$columnName], $this->modifiedDataFields[$columnName]);
     }
 
     /**
      * Test existence of row field
      *
      * @param string $columnName The column key.
-     *
      * @return boolean
      */
     public function __isset(string $columnName)
@@ -150,14 +182,14 @@ abstract class AbstractEntity implements EntityInterface
         return [
             'primaryKeys',
             'columns',
+            'relations',
             'data',
-            'modifiedDataFields'
+            'modifiedDataFields',
         ];
     }
 
     /**
      * @param mixed $array
-     *
      * @return self Provides a fluent interface
      */
     public function exchangeArray(array $array): AbstractEntity
@@ -169,7 +201,6 @@ abstract class AbstractEntity implements EntityInterface
      * Populate Data
      *
      * @param array $rowData
-     *
      * @return self Provides a fluent interface
      */
     public function populate(iterable $rowData): self
@@ -195,21 +226,39 @@ abstract class AbstractEntity implements EntityInterface
     }
 
     /**
-     * @param mixed $array
+     * Replace the entity's data with $array and mark every column as
+     * unmodified, treating the supplied data as the canonical state of the
+     * row (e.g. as just loaded from storage).
      *
      * @return self Provides a fluent interface
      */
     public function synch(iterable $array): AbstractEntity
     {
         $this->reset();
+        $this->populate($array);
+        $this->markClean();
 
-        return $this->populate($array);
+        return $this;
+    }
+
+    /**
+     * Reset the modification tracking flags so that the current data is
+     * treated as the canonical state of the row. No data is modified.
+     *
+     * @return self Provides a fluent interface
+     */
+    public function markClean(): self
+    {
+        $this->modifiedDataFields = array_fill_keys(
+            array_keys($this->modifiedDataFields),
+            false
+        );
+
+        return $this;
     }
 
     /**
      * Return a copy of the row array
-     *
-     * @return array
      */
     public function getArrayCopy(): array
     {
@@ -218,8 +267,6 @@ abstract class AbstractEntity implements EntityInterface
 
     /**
      * Return a copy of the row array only for modified columns
-     *
-     * @return array
      */
     public function getModifiedArrayCopy(): array
     {
@@ -236,11 +283,37 @@ abstract class AbstractEntity implements EntityInterface
 
     /**
      * Return the column definitions of the table row
-     *
-     * @return array
      */
     public function getRelations(): array
     {
         return $this->relations;
+    }
+
+    /**
+     * Return the list of column names declared by the entity.
+     *
+     * @return string[]
+     */
+    public function getColumns(): array
+    {
+        return array_values($this->columns);
+    }
+
+    /**
+     * Name of the optimistic-locking version column, or null if optimistic
+     * locking is not enabled for this entity.
+     */
+    public function getVersionColumn(): ?string
+    {
+        return $this->versionColumn;
+    }
+
+    /**
+     * Compute the next version value given the current one. Override on
+     * subclasses with non-integer version semantics (e.g. timestamps).
+     */
+    public function nextVersion(mixed $current): mixed
+    {
+        return ((int) $current) + 1;
     }
 }

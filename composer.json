@@ -41,6 +41,11 @@
             "Contenir\\Db\\Model\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "ContenirTest\\Db\\Model\\": "test/"
+        }
+    },
     "scripts": {
         "check": [
             "@cs-check",

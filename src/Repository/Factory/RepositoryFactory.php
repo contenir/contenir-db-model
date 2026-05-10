@@ -2,8 +2,6 @@
 
 /**
  * @see       https://github.com/laminas/laminas-mvc-skeleton for the canonical source repository
- * @copyright https://github.com/laminas/laminas-mvc-skeleton/blob/master/COPYRIGHT.md
- * @license   https://github.com/laminas/laminas-mvc-skeleton/blob/master/LICENSE.md New BSD License
  */
 
 declare(strict_types=1);
@@ -14,12 +12,22 @@ use Contenir\Db\Model\Repository\RepositoryLookup;
 use Laminas\ServiceManager\Factory\FactoryInterface;
 use Psr\Container\ContainerInterface;
 
+use function str_ends_with;
+use function str_replace;
+use function strlen;
+use function substr;
+
 class RepositoryFactory implements FactoryInterface
 {
+    /**
+     * @param string     $requestedName
+     * @param array|null $options
+     * @return mixed
+     */
     public function __invoke(
         ContainerInterface $container,
         $requestedName,
-        array $options = null
+        ?array $options = null
     ) {
         $config = $container->get('config')['model'];
 
@@ -38,12 +46,25 @@ class RepositoryFactory implements FactoryInterface
         );
     }
 
-    protected function getEntityClass($config, $requestedName)
+    /**
+     * @param array  $config
+     * @param string $requestedName
+     */
+    protected function getEntityClass($config, $requestedName): string
     {
         $entityClass = $config['map'][$requestedName] ?? null;
 
-        if ($entityClass === null) {
-            $entityClass = str_replace('Repository', 'Entity', $requestedName);
+        if ($entityClass !== null) {
+            return $entityClass;
+        }
+
+        // Anchored convention: replace the trailing class-name "Repository"
+        // suffix and any "\Repository\" namespace segment, leaving unrelated
+        // occurrences (e.g. "RepositoryRegistry") alone.
+        $entityClass = str_replace('\\Repository\\', '\\Entity\\', $requestedName);
+
+        if (str_ends_with($entityClass, 'Repository')) {
+            $entityClass = substr($entityClass, 0, -strlen('Repository')) . 'Entity';
         }
 
         return $entityClass;
