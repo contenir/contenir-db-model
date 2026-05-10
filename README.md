@@ -191,6 +191,31 @@ that pulls the related rows from the configured repository.
 $user->orders; // triggers a SELECT on the orders repository
 ```
 
+The hydrator caches identical FK lookups within its own lifetime, so
+iterating a result set in which many parent rows share the same FK target
+(e.g. fifty orders that all belong to one user) only issues one query per
+distinct target rather than one per row.
+
+To avoid the classic N+1 pattern when each parent has a different FK,
+batch-load the relations up front with `preloadRelations()`:
+
+```php
+$users = iterator_to_array($users->find());
+$users->preloadRelations($users, ['orders', 'profile']);
+
+foreach ($users as $user) {
+    foreach ($user->orders as $order) {
+        // already in memory, no query issued
+    }
+}
+```
+
+`preloadRelations()` issues one SELECT per relation with a `WHERE … IN (…)`
+clause over the parent foreign-key values and assigns the matching rows
+back onto each entity. It currently supports single-column relations
+without `via` join tables; for relations with `via` tables (many-to-many)
+fall back to the lazy-load path.
+
 For many-to-many relationships, declare a `via` table:
 
 ```php

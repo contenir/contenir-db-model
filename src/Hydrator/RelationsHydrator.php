@@ -13,7 +13,11 @@ use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
 /**
- *
+ * Lazy-loads entity relations on first access via a `loadRelation` event
+ * listener attached during {@see self::hydrate()}. Identical FK lookups made
+ * on the same hydrator instance are cached so iterating a result set in
+ * which many parent rows share the same FK target only issues one query
+ * per distinct lookup.
  */
 class RelationsHydrator extends ObjectPropertyHydrator
 {
@@ -25,6 +29,11 @@ class RelationsHydrator extends ObjectPropertyHydrator
      * @var array
      */
     protected array $relations;
+
+    /**
+     * @var array<string, mixed>
+     */
+    private array $cache = [];
 
     /**
      * @param RepositoryLookup $repositoryLookup
@@ -47,13 +56,39 @@ class RelationsHydrator extends ObjectPropertyHydrator
             $params = $e->getParams();
 
             $relationName = $params['relation'];
-            if (array_key_exists($relationName, $this->relations)) {
-                $target->{$relationName} = $this->fetchRelation($this->relations[$relationName],
-                    $target->getArrayCopy());
+            if (! array_key_exists($relationName, $this->relations)) {
+                return;
             }
+
+            $relationData = $target->getArrayCopy();
+            $cacheKey     = $this->cacheKey($relationName, $relationData);
+
+            if (! array_key_exists($cacheKey, $this->cache)) {
+                $this->cache[$cacheKey] = $this->fetchRelation(
+                    $this->relations[$relationName],
+                    $relationData
+                );
+            }
+
+            $target->{$relationName} = $this->cache[$cacheKey];
         });
 
         return $object;
+    }
+
+    /**
+     * Stable key for the (relation, fk-values) pair so duplicate lookups
+     * on different rows that point at the same target hit the cache.
+     */
+    private function cacheKey(string $relationName, array $data): string
+    {
+        $columns = (array) ($this->relations[$relationName]['column'] ?? []);
+        $values  = [];
+        foreach ($columns as $column) {
+            $values[$column] = $data[$column] ?? null;
+        }
+
+        return $relationName . '|' . serialize($values);
     }
 
     /**
@@ -132,6 +167,11 @@ class RelationsHydrator extends ObjectPropertyHydrator
             switch ($relationType) {
                 case AbstractEntity::RELATION_SINGLE:
                     $rows = $results->current();
+                    // Mark as loaded-but-empty so accessing the relation
+                    // again does not re-fire the load event.
+                    if ($rows === null) {
+                        $rows = false;
+                    }
                     break;
 
                 default:

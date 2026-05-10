@@ -11,4 +11,15 @@ class OrderEntity extends AbstractEntity
     protected array $primaryKeys = ['id'];
 
     protected array $columns = ['id', 'user_id', 'total', 'created_at'];
+
+    protected array $relations = [
+        'user' => [
+            'type'   => AbstractEntity::RELATION_SINGLE,
+            'column' => 'user_id',
+            'table'  => [
+                'class'  => UserRepository::class,
+                'column' => 'id',
+            ],
+        ],
+    ];
 }

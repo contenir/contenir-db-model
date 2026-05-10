@@ -336,6 +336,137 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $this->findByField($fieldName, $value)->current();
     }
 
+    /**
+     * Batch-load the named relations for the given entities so subsequent
+     * relation property access does not trigger a per-row query (the N+1
+     * pattern). Issues one SELECT per relation with a WHERE-IN clause over
+     * the parent foreign-key values, then assigns the matching child rows
+     * back onto each parent.
+     *
+     * Limitations:
+     *  - Composite-key relations are not yet supported.
+     *  - Relations declared with a `via` join table are not yet supported.
+     *
+     * @param iterable<EntityInterface> $entities
+     * @param string[]                  $relationNames
+     */
+    public function preloadRelations(iterable $entities, array $relationNames): void
+    {
+        $entities = is_array($entities) ? $entities : iterator_to_array($entities);
+        if ($entities === []) {
+            return;
+        }
+
+        $relations = $this->entityPrototype->getRelations();
+
+        foreach ($relationNames as $relationName) {
+            if (! isset($relations[$relationName])) {
+                throw new InvalidArgumentException(sprintf(
+                    '"%s" is not a declared relation on %s',
+                    $relationName,
+                    $this->entityPrototype::class
+                ));
+            }
+
+            $this->preloadRelation($entities, $relationName, $relations[$relationName]);
+        }
+    }
+
+    /**
+     * @param array<EntityInterface> $entities
+     * @param array<string, mixed>   $config
+     */
+    private function preloadRelation(array $entities, string $relationName, array $config): void
+    {
+        if (! empty($config['via'])) {
+            throw new RuntimeException(sprintf(
+                'preloadRelations does not yet support "via" relations (relation "%s")',
+                $relationName
+            ));
+        }
+
+        $relationColumn      = (array) ($config['column'] ?? []);
+        $relationTable       = $config['table'] ?? [];
+        $relationTableClass  = $relationTable['class'] ?? null;
+        $relationTableColumn = (array) ($relationTable['column'] ?? $relationColumn);
+        $relationType        = $config['type'] ?? AbstractEntity::RELATION_MANY;
+
+        if (count($relationColumn) !== 1 || count($relationTableColumn) !== 1) {
+            throw new RuntimeException(sprintf(
+                'preloadRelations does not yet support composite-key relations (relation "%s")',
+                $relationName
+            ));
+        }
+
+        if (! is_string($relationTableClass)) {
+            throw new InvalidArgumentException(sprintf(
+                'Relation "%s" is missing a table class',
+                $relationName
+            ));
+        }
+
+        $parentColumn = $relationColumn[0];
+        $childColumn  = $relationTableColumn[0];
+
+        $parentValues = [];
+        foreach ($entities as $entity) {
+            $value = $entity->{$parentColumn} ?? null;
+            if ($value !== null) {
+                $parentValues[(string) $value] = $value;
+            }
+        }
+
+        if ($parentValues === []) {
+            $this->assignPreloadedRelations($entities, $relationName, $parentColumn, $relationType, []);
+
+            return;
+        }
+
+        $relatedRepository = $this->repositoryLookup->getContainer()->get($relationTableClass);
+        $select            = $relatedRepository->select();
+        $select->where->in($childColumn, array_values($parentValues));
+
+        if (! empty($config['where'])) {
+            $select->where($config['where']);
+        }
+
+        $relatedRepository->prepareSelect($select, null, $config['order'] ?? []);
+        $rows = $relatedRepository->selectWith($select);
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $key             = (string) ($row->{$childColumn} ?? '');
+            $grouped[$key][] = $row;
+        }
+
+        $this->assignPreloadedRelations($entities, $relationName, $parentColumn, $relationType, $grouped);
+    }
+
+    /**
+     * @param array<EntityInterface>          $entities
+     * @param array<string, list<mixed>>      $grouped
+     */
+    private function assignPreloadedRelations(
+        array $entities,
+        string $relationName,
+        string $parentColumn,
+        string $relationType,
+        array $grouped
+    ): void {
+        foreach ($entities as $entity) {
+            $key      = (string) ($entity->{$parentColumn} ?? '');
+            $children = $grouped[$key] ?? [];
+
+            if ($relationType === AbstractEntity::RELATION_SINGLE) {
+                // Empty array also marks the relation as "loaded" so the
+                // event listener does not re-fire on next access.
+                $entity->{$relationName} = $children === [] ? false : $children[0];
+            } else {
+                $entity->{$relationName} = $children;
+            }
+        }
+    }
+
     public function find($where = null, $order = null, Sql\Select $select = null): ResultSetInterface
     {
         if ($select === null) {
