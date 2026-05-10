@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Contenir\Db\Model\Entity;
 
 use Contenir\Db\Model\Exception\RuntimeException;
 use InvalidArgumentException;
 use Laminas\EventManager\EventManager;
 use Laminas\EventManager\EventManagerAwareTrait;
+use Laminas\EventManager\EventManagerInterface;
 
 abstract class AbstractEntity implements EntityInterface
 {
@@ -58,8 +61,30 @@ abstract class AbstractEntity implements EntityInterface
 
     public function __construct(iterable $data = [])
     {
+        $collisions = array_intersect($this->columns, array_keys($this->relations));
+        if ($collisions !== []) {
+            throw new InvalidArgumentException(sprintf(
+                'Entity columns and relations must not share names; got: %s',
+                implode(', ', $collisions)
+            ));
+        }
+
         $this->reset();
         $this->populate($data);
+    }
+
+    /**
+     * Lazily provide an EventManager so accessing a relation never crashes
+     * on a freshly-instantiated entity that hasn't been hydrated through a
+     * repository.
+     */
+    public function getEventManager(): EventManagerInterface
+    {
+        if ($this->events === null) {
+            $this->setEventManager(new EventManager());
+        }
+
+        return $this->events;
     }
 
     public function getPrimaryKeys(): array
@@ -150,8 +175,9 @@ abstract class AbstractEntity implements EntityInterface
         return [
             'primaryKeys',
             'columns',
+            'relations',
             'data',
-            'modifiedDataFields'
+            'modifiedDataFields',
         ];
     }
 

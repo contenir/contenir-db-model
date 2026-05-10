@@ -42,8 +42,17 @@ class RepositoryFactory implements FactoryInterface
     {
         $entityClass = $config['map'][$requestedName] ?? null;
 
-        if ($entityClass === null) {
-            $entityClass = str_replace('Repository', 'Entity', $requestedName);
+        if ($entityClass !== null) {
+            return $entityClass;
+        }
+
+        // Anchored convention: replace the trailing class-name "Repository"
+        // suffix and any "\Repository\" namespace segment, leaving unrelated
+        // occurrences (e.g. "RepositoryRegistry") alone.
+        $entityClass = str_replace('\\Repository\\', '\\Entity\\', $requestedName);
+
+        if (str_ends_with($entityClass, 'Repository')) {
+            $entityClass = substr($entityClass, 0, -strlen('Repository')) . 'Entity';
         }
 
         return $entityClass;

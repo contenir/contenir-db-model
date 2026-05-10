@@ -6,10 +6,12 @@ namespace ContenirTest\Db\Model\Entity;
 
 use Contenir\Db\Model\Entity\AbstractEntity;
 use Contenir\Db\Model\Exception\RuntimeException;
+use ContenirTest\Db\Model\TestAsset\CollidingEntity;
 use ContenirTest\Db\Model\TestAsset\CompositeKeyEntity;
 use ContenirTest\Db\Model\TestAsset\TestEntity;
 use InvalidArgumentException;
 use Laminas\EventManager\EventManager;
+use Laminas\EventManager\EventManagerInterface;
 use PHPUnit\Framework\TestCase;
 
 class AbstractEntityTest extends TestCase
@@ -228,7 +230,7 @@ class AbstractEntityTest extends TestCase
         $properties = $entity->__sleep();
 
         $this->assertSame(
-            ['primaryKeys', 'columns', 'data', 'modifiedDataFields'],
+            ['primaryKeys', 'columns', 'relations', 'data', 'modifiedDataFields'],
             $properties
         );
     }
@@ -244,5 +246,41 @@ class AbstractEntityTest extends TestCase
         $this->assertSame(1, $restored->id);
         $this->assertSame('A', $restored->name);
         $this->assertSame('a@example.com', $restored->email);
+    }
+
+    public function testSerializeAndUnserializePreservesRelations(): void
+    {
+        $entity = new TestEntity(['id' => 1]);
+
+        $restored = unserialize(serialize($entity));
+
+        $this->assertArrayHasKey('profile', $restored->getRelations());
+    }
+
+    public function testGetEventManagerLazyInitializesWhenNoneAttached(): void
+    {
+        $entity = new TestEntity(['id' => 1]);
+
+        $eventManager = $entity->getEventManager();
+
+        $this->assertInstanceOf(EventManagerInterface::class, $eventManager);
+    }
+
+    public function testAccessingRelationOnFreshEntityDoesNotThrow(): void
+    {
+        $entity = new TestEntity(['id' => 1]);
+
+        // No event manager attached and no listeners; the auto-attached
+        // EventManager has no loadRelation listeners so the relation stays
+        // null but the call must not blow up.
+        $this->assertNull($entity->profile);
+    }
+
+    public function testConstructorThrowsWhenColumnAndRelationShareAName(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('columns and relations must not share names');
+
+        new CollidingEntity();
     }
 }

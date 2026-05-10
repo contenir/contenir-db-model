@@ -85,4 +85,30 @@ class RepositoryFactoryTest extends TestCase
 
         $this->assertSame('Custom\\WidgetEntity', $entityClass);
     }
+
+    public function testGetEntityClassDoesNotMangleUnrelatedRepositoryWord(): void
+    {
+        $factory = new RepositoryFactory();
+        $method  = new ReflectionMethod($factory, 'getEntityClass');
+
+        $config       = ['adapter' => Adapter::class];
+        $requested    = 'App\\RepositoryRegistry\\Sub\\WidgetRepository';
+        $expected     = 'App\\RepositoryRegistry\\Sub\\WidgetEntity';
+        $entityClass  = $method->invoke($factory, $config, $requested);
+
+        $this->assertSame($expected, $entityClass);
+    }
+
+    public function testGetEntityClassReplacesNamespaceSegmentAndSuffixTogether(): void
+    {
+        $factory = new RepositoryFactory();
+        $method  = new ReflectionMethod($factory, 'getEntityClass');
+
+        $config       = ['adapter' => Adapter::class];
+        $requested    = 'App\\Model\\Repository\\Subdir\\WidgetRepository';
+        $expected     = 'App\\Model\\Entity\\Subdir\\WidgetEntity';
+        $entityClass  = $method->invoke($factory, $config, $requested);
+
+        $this->assertSame($expected, $entityClass);
+    }
 }

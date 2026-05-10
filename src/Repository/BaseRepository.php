@@ -6,7 +6,7 @@ use Contenir\Db\Model\Entity\EntityInterface;
 use Contenir\Db\Model\Entity\BaseEntity;
 use Laminas\Db\Sql\Select;
 
-class BaseRepository extends AbstractRepository
+abstract class BaseRepository extends AbstractRepository
 {
     /**
      * @param iterable $data

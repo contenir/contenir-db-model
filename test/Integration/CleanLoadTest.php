@@ -49,4 +49,28 @@ class CleanLoadTest extends IntegrationTestCase
         $this->assertSame('Renamed', $reloaded->name);
         $this->assertSame('alice@example.com', $reloaded->email);
     }
+
+    public function testSaveLeavesEntityCleanAfterUpdate(): void
+    {
+        /** @var UserEntity $user */
+        $user       = $this->users->findOne(['id' => 1]);
+        $user->name = 'Renamed';
+
+        $this->users->save($user);
+
+        $this->assertSame([], $user->getModifiedArrayCopy());
+    }
+
+    public function testSaveLeavesEntityCleanAfterInsert(): void
+    {
+        $entity = $this->users->create([
+            'email' => 'fresh@example.com',
+            'name'  => 'Fresh',
+        ]);
+
+        $this->users->save($entity);
+
+        $this->assertSame([], $entity->getModifiedArrayCopy());
+        $this->assertNotNull($entity->id);
+    }
 }

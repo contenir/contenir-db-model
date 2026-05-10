@@ -146,7 +146,7 @@ abstract class AbstractRepository implements TableGatewayInterface
             $newPrimaryKeys[$key] = $data[$key] ?? $existing[$key];
         }
 
-        $entity->exchangeArray($this->findOne($newPrimaryKeys)->getArrayCopy());
+        $this->synch($entity, $newPrimaryKeys);
     }
 
     public function insert(
@@ -178,7 +178,7 @@ abstract class AbstractRepository implements TableGatewayInterface
             throw new RuntimeException('No row found');
         }
 
-        $data = $this->findOne($primaryKeys)->getArrayCopy();
+        $data = $result->getArrayCopy();
         $entity->synch($data);
         $this->getHydrator()->hydrate($data, $entity);
     }
