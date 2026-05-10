@@ -7,7 +7,12 @@ namespace ContenirTest\Db\Model\Integration;
 use ContenirTest\Db\Model\TestAsset\OrderEntity;
 use Laminas\Db\Adapter\Profiler\Profiler;
 
-class RelationsHydratorCacheTest extends IntegrationTestCase
+use function array_slice;
+use function count;
+use function iterator_to_array;
+use function stripos;
+
+class RelationsHydratorCacheTest extends AbstractIntegrationTestCase
 {
     public function testRepeatedFkLookupsHitTheCache(): void
     {

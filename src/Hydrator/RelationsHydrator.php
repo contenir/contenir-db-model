@@ -12,6 +12,16 @@ use Laminas\Hydrator\ObjectPropertyHydrator;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
+use function array_combine;
+use function array_key_exists;
+use function array_keys;
+use function count;
+use function implode;
+use function is_array;
+use function is_string;
+use function serialize;
+use function sprintf;
+
 /**
  * Lazy-loads entity relations on first access via a `loadRelation` event
  * listener attached during {@see self::hydrate()}. Identical FK lookups made
@@ -21,24 +31,12 @@ use Psr\Container\NotFoundExceptionInterface;
  */
 class RelationsHydrator extends ObjectPropertyHydrator
 {
-    /**
-     * @var RepositoryLookup
-     */
     protected RepositoryLookup $repositoryLookup;
-    /**
-     * @var array
-     */
     protected array $relations;
 
-    /**
-     * @var array<string, mixed>
-     */
+    /** @var array<string, mixed> */
     private array $cache = [];
 
-    /**
-     * @param RepositoryLookup $repositoryLookup
-     * @param array            $relations
-     */
     public function __construct(RepositoryLookup $repositoryLookup, array $relations)
     {
         $this->repositoryLookup = $repositoryLookup;
@@ -46,6 +44,8 @@ class RelationsHydrator extends ObjectPropertyHydrator
     }
 
     /**
+     * @param array  $data
+     * @param object $object
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
@@ -92,6 +92,9 @@ class RelationsHydrator extends ObjectPropertyHydrator
     }
 
     /**
+     * @param array $relationConfig
+     * @param array $data
+     * @return mixed
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
@@ -132,7 +135,7 @@ class RelationsHydrator extends ObjectPropertyHydrator
                     );
                 }
                 if (is_array($relationVia['joinCondition'])) {
-                    $relationVia['joinCondition'] = join(' ', $relationVia['joinCondition']);
+                    $relationVia['joinCondition'] = implode(' ', $relationVia['joinCondition']);
                 }
             }
         }
@@ -185,17 +188,12 @@ class RelationsHydrator extends ObjectPropertyHydrator
         return $rows;
     }
 
-    /**
-     * @param array $relationDefinition
-     *
-     * @return array
-     */
     protected function getRelationDefinition(array $relationDefinition): array
     {
         if (! isset($relationDefinition['column'])) {
             throw new InvalidArgumentException('Relation column is not set');
         }
-        $relationColumn = (array)$relationDefinition['column'];
+        $relationColumn = (array) $relationDefinition['column'];
 
         if (! isset($relationDefinition['table'])) {
             throw new RuntimeException('Relation table data is not set');
@@ -209,13 +207,18 @@ class RelationsHydrator extends ObjectPropertyHydrator
         $relationType        = $relationDefinition['type'] ?? AbstractEntity::RELATION_MANY;
         $relationTableClass  = $relationTable['class'];
         $relationTableColumn = $relationTable['column'] ?? $relationColumn;
-        $relationTableColumn = (array)$relationTableColumn;
+        $relationTableColumn = (array) $relationTableColumn;
 
         $where = $relationDefinition['where'] ?? [];
         $order = $relationDefinition['order'] ?? [];
         $via   = $relationDefinition['via'] ?? [];
+
         if (! empty($via)) {
-            if (! is_string($via['table'])) {
+            if (! is_array($via)) {
+                throw new InvalidArgumentException('Relation "via" must be an array');
+            }
+
+            if (! isset($via['table']) || ! is_string($via['table'])) {
                 throw new InvalidArgumentException('Via table is not set');
             }
         }
@@ -229,9 +232,9 @@ class RelationsHydrator extends ObjectPropertyHydrator
             'relationColumn'      => $relationColumn,
             'relationTableClass'  => $relationTableClass,
             'relationTableColumn' => $relationTableColumn,
-            'relationVia'         => (array)$via,
-            'relationCondition'   => (array)$where,
-            'relationOrder'       => (array)$order
+            'relationVia'         => $via === [] ? [] : (array) $via,
+            'relationCondition'   => (array) $where,
+            'relationOrder'       => (array) $order,
         ];
     }
 }

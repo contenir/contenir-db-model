@@ -10,12 +10,18 @@ use ContenirTest\Db\Model\TestAsset\OrderEntity;
 use ContenirTest\Db\Model\TestAsset\UserEntity;
 use Laminas\Db\Exception\RuntimeException as LaminasRuntimeException;
 use Laminas\Db\ResultSet\ResultSetInterface;
+use Laminas\Db\Sql\Delete;
 use Laminas\Db\Sql\Expression;
 use Laminas\Db\Sql\Insert;
 use Laminas\Db\Sql\TableIdentifier;
 use Laminas\Db\Sql\Update;
+use ReflectionMethod;
+use ReflectionProperty;
 
-class RepositoryIntegrationTest extends IntegrationTestCase
+use function array_map;
+use function iterator_to_array;
+
+class RepositoryIntegrationTest extends AbstractIntegrationTestCase
 {
     public function testFindReturnsHydratedResultSet(): void
     {
@@ -156,7 +162,7 @@ class RepositoryIntegrationTest extends IntegrationTestCase
         $insert = new Insert('other_table');
         $insert->values(['email' => 'x', 'name' => 'X']);
 
-        $reflection = new \ReflectionMethod($this->users, 'executeInsert');
+        $reflection = new ReflectionMethod($this->users, 'executeInsert');
         $this->expectException(LaminasRuntimeException::class);
         $reflection->invoke($this->users, $insert);
     }
@@ -166,16 +172,16 @@ class RepositoryIntegrationTest extends IntegrationTestCase
         $update = new Update('other_table');
         $update->set(['name' => 'X']);
 
-        $reflection = new \ReflectionMethod($this->users, 'executeUpdate');
+        $reflection = new ReflectionMethod($this->users, 'executeUpdate');
         $this->expectException(LaminasRuntimeException::class);
         $reflection->invoke($this->users, $update);
     }
 
     public function testDeleteObjectMustMatchRepositoryTable(): void
     {
-        $delete = new \Laminas\Db\Sql\Delete('other_table');
+        $delete = new Delete('other_table');
 
-        $reflection = new \ReflectionMethod($this->users, 'executeDelete');
+        $reflection = new ReflectionMethod($this->users, 'executeDelete');
         $this->expectException(LaminasRuntimeException::class);
         $reflection->invoke($this->users, $delete);
     }
@@ -207,11 +213,11 @@ class RepositoryIntegrationTest extends IntegrationTestCase
         // Instead, point the Sql object's table to the aliased form to exercise
         // the unaliasing branch in executeInsert. We do this by reconfiguring
         // the repository's protected table via reflection.
-        $tableProp = new \ReflectionProperty($aliasedRepository, 'table');
+        $tableProp = new ReflectionProperty($aliasedRepository, 'table');
         $tableProp->setValue($aliasedRepository, ['o' => 'orders']);
 
         try {
-            $reflection = new \ReflectionMethod($aliasedRepository, 'executeInsert');
+            $reflection = new ReflectionMethod($aliasedRepository, 'executeInsert');
             $affected   = $reflection->invoke($aliasedRepository, $insert);
 
             $this->assertSame(1, $affected);
@@ -259,10 +265,26 @@ class RepositoryIntegrationTest extends IntegrationTestCase
         $this->assertSame(250, (int) $rows[0]->total);
     }
 
+    public function testFindByFieldAcceptsArrayValueAsInClause(): void
+    {
+        $result = $this->orders->findByField('user_id', [1, 2]);
+
+        $rows = iterator_to_array($result);
+        $this->assertCount(3, $rows);
+    }
+
+    public function testFindOneByFieldAcceptsArrayValueAndReturnsFirstMatch(): void
+    {
+        $entity = $this->users->findOneByField('id', [1, 2]);
+
+        $this->assertNotNull($entity);
+        $this->assertContains($entity->id, [1, 2]);
+    }
+
     public function testRepositoryWhereDefaultIsApplied(): void
     {
         // exercise prepareSelect's $this->where branch
-        $reflection = new \ReflectionProperty($this->users, 'where');
+        $reflection = new ReflectionProperty($this->users, 'where');
         $reflection->setValue($this->users, ['id' => 1]);
 
         try {
@@ -276,7 +298,7 @@ class RepositoryIntegrationTest extends IntegrationTestCase
 
     public function testRepositoryOrderDefaultIsApplied(): void
     {
-        $reflection = new \ReflectionProperty($this->users, 'order');
+        $reflection = new ReflectionProperty($this->users, 'order');
         $reflection->setValue($this->users, [new Expression('name ASC')]);
 
         try {
@@ -332,7 +354,7 @@ class RepositoryIntegrationTest extends IntegrationTestCase
             'created_at' => '2024-12-31',
         ]);
 
-        $reflection = new \ReflectionMethod($this->orders, 'executeInsert');
+        $reflection = new ReflectionMethod($this->orders, 'executeInsert');
         $affected   = $reflection->invoke($this->orders, $insert);
 
         $this->assertSame(1, $affected);
@@ -343,7 +365,7 @@ class RepositoryIntegrationTest extends IntegrationTestCase
         // Reconfigure the repository to use a TableIdentifier and feed it an
         // Insert that carries the same table as a plain string. The guard
         // should treat them as the same table.
-        $tableProp = new \ReflectionProperty($this->orders, 'table');
+        $tableProp = new ReflectionProperty($this->orders, 'table');
         $tableProp->setValue($this->orders, new TableIdentifier('orders'));
 
         try {
@@ -354,7 +376,7 @@ class RepositoryIntegrationTest extends IntegrationTestCase
                 'created_at' => '2024-12-31',
             ]);
 
-            $reflection = new \ReflectionMethod($this->orders, 'executeInsert');
+            $reflection = new ReflectionMethod($this->orders, 'executeInsert');
             $affected   = $reflection->invoke($this->orders, $insert);
 
             $this->assertSame(1, $affected);

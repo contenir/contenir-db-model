@@ -19,7 +19,7 @@ use ContenirTest\Db\Model\TestAsset\UserRepository;
 use Laminas\Db\Adapter\Adapter;
 use PHPUnit\Framework\TestCase;
 
-abstract class IntegrationTestCase extends TestCase
+abstract class AbstractIntegrationTestCase extends TestCase
 {
     protected Adapter $adapter;
     protected InMemoryContainer $container;

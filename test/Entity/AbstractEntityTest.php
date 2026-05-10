@@ -14,6 +14,9 @@ use Laminas\EventManager\EventManager;
 use Laminas\EventManager\EventManagerInterface;
 use PHPUnit\Framework\TestCase;
 
+use function serialize;
+use function unserialize;
+
 class AbstractEntityTest extends TestCase
 {
     public function testConstructorPopulatesProvidedData(): void
@@ -174,8 +177,8 @@ class AbstractEntityTest extends TestCase
 
     public function testSynchLeavesEntityWithNoModifications(): void
     {
-        $entity        = new TestEntity(['id' => 1, 'name' => 'A']);
-        $entity->name  = 'dirty';
+        $entity       = new TestEntity(['id' => 1, 'name' => 'A']);
+        $entity->name = 'dirty';
         $this->assertNotSame([], $entity->getModifiedArrayCopy());
 
         $entity->synch(['id' => 5, 'name' => 'fresh']);
@@ -185,8 +188,8 @@ class AbstractEntityTest extends TestCase
 
     public function testMarkCleanDropsExistingModificationFlags(): void
     {
-        $entity        = new TestEntity(['id' => 1, 'name' => 'A']);
-        $entity->name  = 'dirty';
+        $entity       = new TestEntity(['id' => 1, 'name' => 'A']);
+        $entity->name = 'dirty';
 
         $entity->markClean();
 
@@ -223,8 +226,8 @@ class AbstractEntityTest extends TestCase
 
         $triggered = [];
         $eventManager->attach('loadRelation', function ($event) use (&$triggered) {
-            $params              = $event->getParams();
-            $triggered[]         = $params['relation'];
+            $params                      = $event->getParams();
+            $triggered[]                 = $params['relation'];
             $event->getTarget()->profile = ['loaded' => true];
         });
 
@@ -247,9 +250,9 @@ class AbstractEntityTest extends TestCase
 
     public function testSerializeAndUnserializePreservesData(): void
     {
-        $entity         = new TestEntity(['id' => 1, 'name' => 'A']);
-        $entity->email  = 'a@example.com';
-        $serialized     = serialize($entity);
+        $entity        = new TestEntity(['id' => 1, 'name' => 'A']);
+        $entity->email = 'a@example.com';
+        $serialized    = serialize($entity);
         /** @var TestEntity $restored */
         $restored = unserialize($serialized);
 

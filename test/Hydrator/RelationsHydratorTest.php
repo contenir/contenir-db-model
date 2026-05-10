@@ -99,6 +99,21 @@ class RelationsHydratorTest extends TestCase
         ]);
     }
 
+    public function testRelationDefinitionThrowsWhenViaIsNotAnArray(): void
+    {
+        $hydrator = $this->newHydrator();
+        $method   = new ReflectionMethod($hydrator, 'getRelationDefinition');
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('"via" must be an array');
+
+        $method->invoke($hydrator, [
+            'column' => 'id',
+            'table'  => ['class' => 'SomeRepository', 'column' => 'user_id'],
+            'via'    => 'user_tag',
+        ]);
+    }
+
     public function testRelationDefinitionThrowsWhenColumnCountMismatch(): void
     {
         $hydrator = $this->newHydrator();

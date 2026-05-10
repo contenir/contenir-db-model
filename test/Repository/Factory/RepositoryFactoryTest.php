@@ -57,9 +57,9 @@ class RepositoryFactoryTest extends TestCase
         $factory = new RepositoryFactory();
         $method  = new ReflectionMethod($factory, 'getEntityClass');
 
-        $config       = ['adapter' => Adapter::class];
-        $requested    = 'App\\Model\\Repository\\UserRepository';
-        $expected     = 'App\\Model\\Entity\\UserEntity';
+        $config      = ['adapter' => Adapter::class];
+        $requested   = 'App\\Model\\Repository\\UserRepository';
+        $expected    = 'App\\Model\\Entity\\UserEntity';
         $entityClass = $method->invoke($factory, $config, $requested);
 
         $this->assertSame($expected, $entityClass);
@@ -91,10 +91,10 @@ class RepositoryFactoryTest extends TestCase
         $factory = new RepositoryFactory();
         $method  = new ReflectionMethod($factory, 'getEntityClass');
 
-        $config       = ['adapter' => Adapter::class];
-        $requested    = 'App\\RepositoryRegistry\\Sub\\WidgetRepository';
-        $expected     = 'App\\RepositoryRegistry\\Sub\\WidgetEntity';
-        $entityClass  = $method->invoke($factory, $config, $requested);
+        $config      = ['adapter' => Adapter::class];
+        $requested   = 'App\\RepositoryRegistry\\Sub\\WidgetRepository';
+        $expected    = 'App\\RepositoryRegistry\\Sub\\WidgetEntity';
+        $entityClass = $method->invoke($factory, $config, $requested);
 
         $this->assertSame($expected, $entityClass);
     }
@@ -104,10 +104,10 @@ class RepositoryFactoryTest extends TestCase
         $factory = new RepositoryFactory();
         $method  = new ReflectionMethod($factory, 'getEntityClass');
 
-        $config       = ['adapter' => Adapter::class];
-        $requested    = 'App\\Model\\Repository\\Subdir\\WidgetRepository';
-        $expected     = 'App\\Model\\Entity\\Subdir\\WidgetEntity';
-        $entityClass  = $method->invoke($factory, $config, $requested);
+        $config      = ['adapter' => Adapter::class];
+        $requested   = 'App\\Model\\Repository\\Subdir\\WidgetRepository';
+        $expected    = 'App\\Model\\Entity\\Subdir\\WidgetEntity';
+        $entityClass = $method->invoke($factory, $config, $requested);
 
         $this->assertSame($expected, $entityClass);
     }

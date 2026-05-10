@@ -9,7 +9,10 @@ use ContenirTest\Db\Model\TestAsset\ProfileEntity;
 use ContenirTest\Db\Model\TestAsset\TagEntity;
 use ContenirTest\Db\Model\TestAsset\UserEntity;
 
-class RelationsHydratorIntegrationTest extends IntegrationTestCase
+use function array_map;
+use function sort;
+
+class RelationsHydratorIntegrationTest extends AbstractIntegrationTestCase
 {
     public function testSingleRelationLoadsRelatedRow(): void
     {

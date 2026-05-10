@@ -11,6 +11,9 @@ use Laminas\EventManager\EventManagerAwareInterface;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
+use function method_exists;
+use function sprintf;
+
 class EntityInterfaceTest extends TestCase
 {
     public function testInterfaceExtendsEventManagerAware(): void

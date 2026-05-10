@@ -1,13 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Contenir\Db\Model;
 
 class Module
 {
     /**
      * Retrieve default laminas-paginator config for laminas-mvc context.
-     *
-     * @return array
      */
     public function getConfig(): array
     {
@@ -15,7 +15,7 @@ class Module
 
         return [
             'service_manager' => $provider->getDependencyConfig(),
-            'model'           => $provider->getDbModelConfig()
+            'model'           => $provider->getDbModelConfig(),
         ];
     }
 }

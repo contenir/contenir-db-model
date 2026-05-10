@@ -6,7 +6,7 @@ namespace ContenirTest\Db\Model\Integration;
 
 use ContenirTest\Db\Model\TestAsset\UserEntity;
 
-class SmokeTest extends IntegrationTestCase
+class SmokeTest extends AbstractIntegrationTestCase
 {
     public function testFindLoadsExistingUser(): void
     {

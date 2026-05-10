@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace ContenirTest\Db\Model\TestAsset;
 
 use Psr\Container\ContainerInterface;
-use Psr\Container\NotFoundExceptionInterface;
-use RuntimeException;
+
+use function array_key_exists;
 
 class InMemoryContainer implements ContainerInterface
 {
@@ -26,8 +26,7 @@ class InMemoryContainer implements ContainerInterface
     public function get(string $id): mixed
     {
         if (! $this->has($id)) {
-            throw new class ('Service ' . $id . ' not registered') extends RuntimeException implements NotFoundExceptionInterface {
-            };
+            throw new InMemoryContainerNotFoundException('Service ' . $id . ' not registered');
         }
 
         return $this->services[$id];

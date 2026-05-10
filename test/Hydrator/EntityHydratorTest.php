@@ -14,8 +14,8 @@ class EntityHydratorTest extends TestCase
 {
     public function testHydrateRoutesAbstractEntityThroughSynch(): void
     {
-        $hydrator = new EntityHydrator();
-        $entity   = new TestEntity(['id' => 1, 'name' => 'old']);
+        $hydrator     = new EntityHydrator();
+        $entity       = new TestEntity(['id' => 1, 'name' => 'old']);
         $entity->name = 'dirty';
 
         $hydrator->hydrate(['id' => 5, 'name' => 'fresh', 'email' => 'x@x'], $entity);

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Contenir\Db\Model\Repository;
 
 use Closure;
@@ -13,13 +15,22 @@ use Laminas\Db\Exception\RuntimeException;
 use Laminas\Db\ResultSet\HydratingResultSet;
 use Laminas\Db\ResultSet\ResultSetInterface;
 use Laminas\Db\Sql;
-use Laminas\Db\Sql\Delete;
-use Laminas\Db\Sql\Insert;
 use Laminas\Db\Sql\TableIdentifier;
-use Laminas\Db\Sql\Update;
 use Laminas\Db\TableGateway\TableGatewayInterface;
 use Laminas\Hydrator\Aggregate\AggregateHydrator;
 use Laminas\Hydrator\HydratorInterface;
+
+use function array_filter;
+use function array_keys;
+use function array_shift;
+use function array_values;
+use function count;
+use function in_array;
+use function is_array;
+use function is_string;
+use function iterator_to_array;
+use function key;
+use function sprintf;
 
 abstract class AbstractRepository implements TableGatewayInterface
 {
@@ -27,29 +38,16 @@ abstract class AbstractRepository implements TableGatewayInterface
     public const MODE_INSERT = 'insert';
     public const MODE_UPDATE = 'update';
 
-    /**
-     * @var string|array|TableIdentifier|null
-     */
+    /** @var string|array|TableIdentifier|null */
     protected TableIdentifier|string|array|null $table = null;
 
-    /**
-     * @var Adapter
-     */
     protected Adapter $adapter;
 
-    /**
-     * @var Sql\Sql
-     */
     protected Sql\Sql $sql;
 
-    /**
-     * @var AbstractEntity
-     */
+    /** @var AbstractEntity */
     protected EntityInterface $entityPrototype;
 
-    /**
-     * @var RepositoryLookup
-     */
     protected RepositoryLookup $repositoryLookup;
 
     /**
@@ -62,10 +60,6 @@ abstract class AbstractRepository implements TableGatewayInterface
      */
     protected array $order = [];
 
-    /**
-     *
-     * @var int|null
-     */
     protected ?int $lastInsertValue = null;
 
     public function __construct(
@@ -115,6 +109,10 @@ abstract class AbstractRepository implements TableGatewayInterface
 
     abstract public function create(iterable $data = []): EntityInterface;
 
+    /**
+     * @param EntityInterface $entity
+     * @param string          $mode
+     */
     public function save($entity, $mode = self::MODE_AUTO): void
     {
         $data     = $entity->getModifiedArrayCopy();
@@ -122,14 +120,14 @@ abstract class AbstractRepository implements TableGatewayInterface
 
         $primaryKeys = $entity->getPrimaryKeys();
 
-        if ($mode == self::MODE_AUTO) {
-            $mode = (count(array_filter($primaryKeys)) == 0) ? self::MODE_INSERT : self::MODE_UPDATE;
+        if ($mode === self::MODE_AUTO) {
+            $mode = count(array_filter($primaryKeys)) === 0 ? self::MODE_INSERT : self::MODE_UPDATE;
         }
 
         switch ($mode) {
             case self::MODE_INSERT:
                 $this->insert($data);
-                if ($this->getLastInsertValue() && count($primaryKeys) == 1) {
+                if ($this->getLastInsertValue() && count($primaryKeys) === 1) {
                     $data[key($primaryKeys)] = $this->getLastInsertValue();
                 }
                 break;
@@ -149,6 +147,9 @@ abstract class AbstractRepository implements TableGatewayInterface
         $this->synch($entity, $newPrimaryKeys);
     }
 
+    /**
+     * @param array $set
+     */
     public function insert(
         $set
     ): int {
@@ -160,8 +161,6 @@ abstract class AbstractRepository implements TableGatewayInterface
 
     /**
      * Get last insert value
-     *
-     * @return int|null
      */
     public function getLastInsertValue(): ?int
     {
@@ -184,12 +183,8 @@ abstract class AbstractRepository implements TableGatewayInterface
     }
 
     /**
-     * @param Insert $insert
-     *
      * @throws RuntimeException
-     * @return int
      * @todo add $columns support
-     *
      */
     protected function executeInsert(Sql\Insert $insert): int
     {
@@ -205,9 +200,11 @@ abstract class AbstractRepository implements TableGatewayInterface
             $insert->into($unaliasedTable);
         }
 
-        $statement             = $this->sql->prepareStatementForSqlObject($insert);
-        $result                = $statement->execute();
-        $this->lastInsertValue = $this->adapter->getDriver()->getConnection()->getLastGeneratedValue();
+        $statement = $this->sql->prepareStatementForSqlObject($insert);
+        $result    = $statement->execute();
+
+        $lastInsertValue       = $this->adapter->getDriver()->getConnection()->getLastGeneratedValue();
+        $this->lastInsertValue = $lastInsertValue === null ? null : (int) $lastInsertValue;
 
         // Reset original table information in Insert instance, if necessary
         if ($unaliasedTable) {
@@ -217,7 +214,12 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $result->getAffectedRows();
     }
 
-    public function update($set, $where = null, array $joins = null): int
+    /**
+     * @param array                          $set
+     * @param Closure|array|string|int|null  $where
+     * @param array|null                     $joins
+     */
+    public function update($set, $where = null, ?array $joins = null): int
     {
         $sql    = $this->sql;
         $update = $sql->update();
@@ -237,12 +239,8 @@ abstract class AbstractRepository implements TableGatewayInterface
     }
 
     /**
-     * @param Update $update
-     *
      * @throws RuntimeException
-     * @return int
      * @todo add $columns support
-     *
      */
     protected function executeUpdate(Sql\Update $update): int
     {
@@ -268,6 +266,9 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $result->getAffectedRows();
     }
 
+    /**
+     * @param Closure|array|string|int|null $where
+     */
     public function select($where = null): Sql\Select
     {
         return $this->sql->select();
@@ -285,6 +286,9 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $resultSet;
     }
 
+    /**
+     * @param Closure|array|string|int $where
+     */
     public function delete($where): int
     {
         $delete = $this->sql->delete();
@@ -298,12 +302,8 @@ abstract class AbstractRepository implements TableGatewayInterface
     }
 
     /**
-     * @param Delete $delete
-     *
      * @throws RuntimeException
-     * @return int
      * @todo add $columns support
-     *
      */
     protected function executeDelete(Sql\Delete $delete): int
     {
@@ -328,8 +328,16 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $result->getAffectedRows();
     }
 
-    abstract public function findOne($where = null, $order = null, Sql\Select $select = null): ?EntityInterface;
+    /**
+     * @param Closure|array|string|int|null $where
+     * @param array|string|null             $order
+     */
+    abstract public function findOne($where = null, $order = null, ?Sql\Select $select = null): ?EntityInterface;
 
+    /**
+     * @param string $fieldName
+     * @param mixed  $value
+     */
     public function findOneByField($fieldName, $value): ?EntityInterface
     {
         return $this->findByField($fieldName, $value)->current();
@@ -466,7 +474,11 @@ abstract class AbstractRepository implements TableGatewayInterface
         }
     }
 
-    public function find($where = null, $order = null, Sql\Select $select = null): ResultSetInterface
+    /**
+     * @param Closure|array|string|int|null $where
+     * @param array|string|null             $order
+     */
+    public function find($where = null, $order = null, ?Sql\Select $select = null): ResultSetInterface
     {
         if ($select === null) {
             $select = $this->select();
@@ -477,6 +489,17 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $this->selectWith($select);
     }
 
+    /**
+     * Find rows matching $fieldName = $value. If $value is an array the
+     * predicate becomes WHERE $fieldName IN (...). $fieldName is validated
+     * against the entity prototype's declared columns.
+     *
+     * @param string                $fieldName
+     * @param mixed                 $value     scalar or list of scalars
+     * @param Closure|array|null    $where
+     * @param array|string|null     $order
+     * @param Sql\Select|null       $select
+     */
     public function findByField($fieldName, $value, $where = [], $order = null, $select = null): ResultSetInterface
     {
         $this->assertKnownColumn($fieldName);
@@ -485,7 +508,11 @@ abstract class AbstractRepository implements TableGatewayInterface
             $select = $this->select();
         }
 
-        $select->where([$fieldName => $value]);
+        if (is_array($value)) {
+            $select->where->in($fieldName, $value);
+        } else {
+            $select->where([$fieldName => $value]);
+        }
 
         if ($where instanceof Closure) {
             $where($select);
@@ -543,8 +570,12 @@ abstract class AbstractRepository implements TableGatewayInterface
         return (string) ($table ?? '');
     }
 
+    /**
+     * @param Closure|array|string|int|null $where
+     * @param array|string|null             $order
+     */
     public function prepareSelect(
-        Sql\Select $select = null,
+        ?Sql\Select $select = null,
         $where = [],
         $order = []
     ): ?Sql\Select {

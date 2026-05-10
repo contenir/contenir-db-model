@@ -10,6 +10,19 @@ use Laminas\EventManager\EventManager;
 use Laminas\EventManager\EventManagerAwareTrait;
 use Laminas\EventManager\EventManagerInterface;
 
+use function array_combine;
+use function array_diff_key;
+use function array_fill_keys;
+use function array_filter;
+use function array_intersect;
+use function array_intersect_key;
+use function array_key_exists;
+use function array_keys;
+use function array_merge;
+use function array_values;
+use function implode;
+use function sprintf;
+
 abstract class AbstractEntity implements EntityInterface
 {
     use EventManagerAwareTrait;
@@ -19,36 +32,26 @@ abstract class AbstractEntity implements EntityInterface
 
     /**
      * Primary Keys for table
-     *
-     * @var array
      */
     protected array $primaryKeys = [];
 
     /**
      * List of table columns
-     *
-     * @var array
      */
     protected array $columns = [];
 
     /**
      * Table row data
-     *
-     * @var array
      */
     protected array $data = [];
 
     /**
      * Indicates if table row data has been modified programmatically
-     *
-     * @var array
      */
     protected array $modifiedDataFields = [];
 
     /**
      * Lookup for table relations
-     *
-     * @var array
      */
     protected array $relations = [];
 
@@ -101,15 +104,14 @@ abstract class AbstractEntity implements EntityInterface
      * Retrieve row field value
      *
      * @param string $columnName The user-specified column name.
-     *
-     * @throws RuntimeException if the $columnName is not a column in the row.
-     * @return string             The corresponding column value.
+     * @return mixed              The corresponding column value.
+     * @throws RuntimeException If the $columnName is not a column in the row.
      */
     public function __get(string $columnName)
     {
-        if (array_key_exists($columnName, $this->relations) && is_null($this->data[$columnName] ?? null)) {
+        if (array_key_exists($columnName, $this->relations) && ($this->data[$columnName] ?? null) === null) {
             $this->getEventManager()->trigger('loadRelation', $this, [
-                'relation' => $columnName
+                'relation' => $columnName,
             ]);
         }
 
@@ -128,13 +130,11 @@ abstract class AbstractEntity implements EntityInterface
      *
      * @param string $columnName The column key.
      * @param mixed  $value      The value for the property.
-     *
-     * @return void
      */
     public function __set(string $columnName, mixed $value): void
     {
         if (array_key_exists($columnName, $this->data)) {
-            $this->modifiedDataFields[$columnName] = ($this->data[$columnName] !== $value);
+            $this->modifiedDataFields[$columnName] = $this->data[$columnName] !== $value;
             $this->data[$columnName]               = $value;
         }
     }
@@ -143,8 +143,6 @@ abstract class AbstractEntity implements EntityInterface
      * Unset row field value
      *
      * @param string $columnName The column key.
-     *
-     * @return void
      */
     public function __unset(string $columnName): void
     {
@@ -159,7 +157,6 @@ abstract class AbstractEntity implements EntityInterface
      * Test existence of row field
      *
      * @param string $columnName The column key.
-     *
      * @return boolean
      */
     public function __isset(string $columnName)
@@ -185,7 +182,6 @@ abstract class AbstractEntity implements EntityInterface
 
     /**
      * @param mixed $array
-     *
      * @return self Provides a fluent interface
      */
     public function exchangeArray(array $array): AbstractEntity
@@ -197,7 +193,6 @@ abstract class AbstractEntity implements EntityInterface
      * Populate Data
      *
      * @param array $rowData
-     *
      * @return self Provides a fluent interface
      */
     public function populate(iterable $rowData): self
@@ -226,8 +221,6 @@ abstract class AbstractEntity implements EntityInterface
      * Replace the entity's data with $array and mark every column as
      * unmodified, treating the supplied data as the canonical state of the
      * row (e.g. as just loaded from storage).
-     *
-     * @param iterable $array
      *
      * @return self Provides a fluent interface
      */
@@ -258,8 +251,6 @@ abstract class AbstractEntity implements EntityInterface
 
     /**
      * Return a copy of the row array
-     *
-     * @return array
      */
     public function getArrayCopy(): array
     {
@@ -268,8 +259,6 @@ abstract class AbstractEntity implements EntityInterface
 
     /**
      * Return a copy of the row array only for modified columns
-     *
-     * @return array
      */
     public function getModifiedArrayCopy(): array
     {
@@ -286,8 +275,6 @@ abstract class AbstractEntity implements EntityInterface
 
     /**
      * Return the column definitions of the table row
-     *
-     * @return array
      */
     public function getRelations(): array
     {

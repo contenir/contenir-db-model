@@ -21,7 +21,7 @@ class UserEntity extends AbstractEntity
                 'column' => 'user_id',
             ],
         ],
-        'orders' => [
+        'orders'  => [
             'type'   => AbstractEntity::RELATION_MANY,
             'column' => 'id',
             'table'  => [
@@ -30,14 +30,14 @@ class UserEntity extends AbstractEntity
             ],
             'order'  => ['created_at DESC'],
         ],
-        'tags' => [
+        'tags'    => [
             'type'   => AbstractEntity::RELATION_MANY,
             'column' => 'id',
             'table'  => [
                 'class'  => TagRepository::class,
                 'column' => 'id',
             ],
-            'via' => [
+            'via'    => [
                 'table'  => 'user_tag',
                 'column' => 'user_id',
                 'join'   => 'tag_id',

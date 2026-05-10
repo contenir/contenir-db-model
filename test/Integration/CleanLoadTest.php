@@ -6,7 +6,7 @@ namespace ContenirTest\Db\Model\Integration;
 
 use ContenirTest\Db\Model\TestAsset\UserEntity;
 
-class CleanLoadTest extends IntegrationTestCase
+class CleanLoadTest extends AbstractIntegrationTestCase
 {
     public function testFindOneReturnsEntityWithNoModifications(): void
     {

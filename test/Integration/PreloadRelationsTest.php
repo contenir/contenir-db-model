@@ -10,7 +10,10 @@ use ContenirTest\Db\Model\TestAsset\UserEntity;
 use Laminas\Db\Adapter\Profiler\Profiler;
 use Laminas\Db\Exception\RuntimeException;
 
-class PreloadRelationsTest extends IntegrationTestCase
+use function count;
+use function iterator_to_array;
+
+class PreloadRelationsTest extends AbstractIntegrationTestCase
 {
     public function testPreloadAssignsManyRelationToEachParent(): void
     {
