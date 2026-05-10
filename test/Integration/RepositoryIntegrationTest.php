@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ContenirTest\Db\Model\Integration;
 
+use Contenir\Db\Model\Exception\InvalidArgumentException;
 use Contenir\Db\Model\Repository\AbstractRepository;
 use ContenirTest\Db\Model\TestAsset\OrderEntity;
 use ContenirTest\Db\Model\TestAsset\UserEntity;
@@ -11,6 +12,7 @@ use Laminas\Db\Exception\RuntimeException as LaminasRuntimeException;
 use Laminas\Db\ResultSet\ResultSetInterface;
 use Laminas\Db\Sql\Expression;
 use Laminas\Db\Sql\Insert;
+use Laminas\Db\Sql\TableIdentifier;
 use Laminas\Db\Sql\Update;
 
 class RepositoryIntegrationTest extends IntegrationTestCase
@@ -283,6 +285,81 @@ class RepositoryIntegrationTest extends IntegrationTestCase
             $this->assertSame(['Alice', 'Bob'], $names);
         } finally {
             $reflection->setValue($this->users, []);
+        }
+    }
+
+    public function testFindByFieldRejectsUnknownColumn(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('not a known column');
+
+        $this->users->findByField("id) OR (1=1 --", 1);
+    }
+
+    public function testFindOneByFieldRejectsUnknownColumn(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->users->findOneByField('not_a_column', 1);
+    }
+
+    public function testFindByFieldRejectsRelationName(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        // Relations are not table columns and shouldn't be addressable as
+        // such even though they appear in the entity's data array.
+        $this->users->findByField('profile', 1);
+    }
+
+    public function testFindAcceptsAssociativeOrderArray(): void
+    {
+        $rows  = iterator_to_array($this->users->find([], ['name' => 'DESC']));
+        $names = array_map(static fn($u) => $u->name, $rows);
+
+        $this->assertSame(['Bob', 'Alice'], $names);
+    }
+
+    public function testTableMatchGuardRecognisesAliasedArrayWhenTableIsString(): void
+    {
+        // $this->table = 'orders'; the Insert below carries ['o' => 'orders'].
+        // The pre-fix code rejected this with the loose !=. Now it normalises
+        // both sides and accepts the same underlying table.
+        $insert = new Insert(['o' => 'orders']);
+        $insert->values([
+            'user_id'    => 1,
+            'total'      => 999,
+            'created_at' => '2024-12-31',
+        ]);
+
+        $reflection = new \ReflectionMethod($this->orders, 'executeInsert');
+        $affected   = $reflection->invoke($this->orders, $insert);
+
+        $this->assertSame(1, $affected);
+    }
+
+    public function testTableMatchGuardRecognisesTableIdentifier(): void
+    {
+        // Reconfigure the repository to use a TableIdentifier and feed it an
+        // Insert that carries the same table as a plain string. The guard
+        // should treat them as the same table.
+        $tableProp = new \ReflectionProperty($this->orders, 'table');
+        $tableProp->setValue($this->orders, new TableIdentifier('orders'));
+
+        try {
+            $insert = new Insert('orders');
+            $insert->values([
+                'user_id'    => 1,
+                'total'      => 555,
+                'created_at' => '2024-12-31',
+            ]);
+
+            $reflection = new \ReflectionMethod($this->orders, 'executeInsert');
+            $affected   = $reflection->invoke($this->orders, $insert);
+
+            $this->assertSame(1, $affected);
+        } finally {
+            $tableProp->setValue($this->orders, 'orders');
         }
     }
 }

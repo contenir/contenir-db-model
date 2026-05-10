@@ -136,8 +136,11 @@ return [
 ];
 ```
 
-By default `RepositoryFactory` resolves the entity by replacing
-`Repository` with `Entity` in the requested service name. Override this with
+By default `RepositoryFactory` resolves the entity by anchoring the
+convention to the trailing class name and the `\Repository\` namespace
+segment, so `App\Model\Repository\UserRepository` resolves to
+`App\Model\Entity\UserEntity`. Unrelated occurrences of "Repository"
+elsewhere in the namespace are left alone. Override the convention with
 the `model.map` config when your naming differs.
 
 ### 3. Query and persist
@@ -156,6 +159,18 @@ $users->save($new);  // mode auto → insert; primary key is back-filled
 
 $users->delete(['id' => 42]);
 ```
+
+`findByField($column, $value)` validates `$column` against the
+declared columns of the entity prototype and rejects unknown values, so
+caller-controlled column names cannot smuggle SQL into the predicate's
+left-hand side.
+
+`$order` arguments to `find`, `findByField`, and `prepareSelect` are
+passed straight to `Laminas\Db\Sql\Select::order()`, which quotes
+identifiers. Pass either a string (`'name ASC'`), a list
+(`['name', 'created_at DESC']`), or an associative array
+(`['name' => 'ASC']`). For raw SQL fragments, pass a
+`Laminas\Db\Sql\Expression` instance explicitly.
 
 `save()` accepts an explicit mode if you need to override the detection:
 

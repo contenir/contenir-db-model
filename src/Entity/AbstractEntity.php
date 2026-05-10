@@ -291,4 +291,14 @@ abstract class AbstractEntity implements EntityInterface
     {
         return $this->relations;
     }
+
+    /**
+     * Return the list of column names declared by the entity.
+     *
+     * @return string[]
+     */
+    public function getColumns(): array
+    {
+        return array_values($this->columns);
+    }
 }

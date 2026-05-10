@@ -6,6 +6,7 @@ use ArrayObject;
 use Closure;
 use Contenir\Db\Model\Entity\AbstractEntity;
 use Contenir\Db\Model\Entity\EntityInterface;
+use Contenir\Db\Model\Exception\InvalidArgumentException;
 use Contenir\Db\Model\Hydrator\EntityHydrator;
 use Contenir\Db\Model\Hydrator\RelationsHydrator;
 use Laminas\Db\Adapter\Adapter;
@@ -194,11 +195,7 @@ abstract class AbstractRepository implements TableGatewayInterface
     protected function executeInsert(Sql\Insert $insert): int
     {
         $insertState = $insert->getRawState();
-        if ($insertState['table'] != $this->table) {
-            throw new RuntimeException(
-                'The table name of the provided Insert object must match that of the table'
-            );
-        }
+        $this->assertTableMatches($insertState['table']);
 
         // Most RDBMS solutions do not allow using table aliases in INSERTs
         // See https://github.com/zendframework/zf2/issues/7311
@@ -251,11 +248,7 @@ abstract class AbstractRepository implements TableGatewayInterface
     protected function executeUpdate(Sql\Update $update): int
     {
         $updateState = $update->getRawState();
-        if ($updateState['table'] != $this->table) {
-            throw new RuntimeException(
-                'The table name of the provided Update object must match that of the table'
-            );
-        }
+        $this->assertTableMatches($updateState['table']);
 
         $unaliasedTable = false;
         if (is_array($updateState['table'])) {
@@ -316,11 +309,7 @@ abstract class AbstractRepository implements TableGatewayInterface
     protected function executeDelete(Sql\Delete $delete): int
     {
         $deleteState = $delete->getRawState();
-        if ($deleteState['table'] != $this->table) {
-            throw new RuntimeException(
-                'The table name of the provided Delete object must match that of the table'
-            );
-        }
+        $this->assertTableMatches($deleteState['table']);
 
         $unaliasedTable = false;
         if (is_array($deleteState['table'])) {
@@ -360,6 +349,8 @@ abstract class AbstractRepository implements TableGatewayInterface
 
     public function findByField($fieldName, $value, $where = [], $order = null, $select = null): ResultSetInterface
     {
+        $this->assertKnownColumn($fieldName);
+
         if ($select === null) {
             $select = $this->select();
         }
@@ -373,6 +364,53 @@ abstract class AbstractRepository implements TableGatewayInterface
         }
 
         return $this->find(null, $order, $select);
+    }
+
+    /**
+     * Reject column names that are not declared on the entity prototype.
+     * Stops caller-supplied $fieldName (e.g. from query strings) from
+     * smuggling SQL into the predicate's left-hand side.
+     */
+    private function assertKnownColumn(string $fieldName): void
+    {
+        if (! in_array($fieldName, $this->entityPrototype->getColumns(), true)) {
+            throw new InvalidArgumentException(sprintf(
+                '"%s" is not a known column on %s',
+                $fieldName,
+                $this->entityPrototype::class
+            ));
+        }
+    }
+
+    /**
+     * Verify that $candidate refers to the same table as the repository,
+     * regardless of whether it is expressed as a string, an
+     * alias-keyed array, or a TableIdentifier.
+     */
+    private function assertTableMatches(mixed $candidate): void
+    {
+        if ($this->canonicalTableName($candidate) !== $this->canonicalTableName($this->table)) {
+            throw new RuntimeException(
+                'The table name of the provided SQL object must match that of the repository'
+            );
+        }
+    }
+
+    private function canonicalTableName(mixed $table): string
+    {
+        if ($table instanceof TableIdentifier) {
+            return $table->getTable();
+        }
+
+        if (is_array($table)) {
+            // alias => table
+            $values = array_values($table);
+            $first  = $values[0] ?? '';
+
+            return $first instanceof TableIdentifier ? $first->getTable() : (string) $first;
+        }
+
+        return (string) ($table ?? '');
     }
 
     public function prepareSelect(
@@ -393,13 +431,11 @@ abstract class AbstractRepository implements TableGatewayInterface
         }
 
         if (! empty($order)) {
-            if (is_array($order)) {
-                foreach ($order as $part) {
-                    $select->order(new Sql\Expression($part));
-                }
-            } else {
-                $select->order(new Sql\Expression($order));
-            }
+            // Pass through to Select::order(); it handles strings,
+            // [column => direction] and [column, ...] arrays, and
+            // Sql\Expression instances. Identifier quoting is applied
+            // by the SQL platform.
+            $select->order($order);
         }
 
         if ($this->order) {
