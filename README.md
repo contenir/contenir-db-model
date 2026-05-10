@@ -188,8 +188,8 @@ For many-to-many relationships, declare a `via` table:
     ],
     'via' => [
         'table'  => 'user_tag',
-        'column' => 'tag_id', // column on the join table that joins back to the tag table
-        'join'   => 'user_id', // column on the join table matching the source row
+        'column' => 'user_id', // column on the join table matching the owning row's key
+        'join'   => 'tag_id',  // column on the join table matching the related table's key
     ],
 ],
 ```
@@ -207,11 +207,15 @@ matching SPL exception:
 
 ```bash
 composer install
-composer test            # run the unit tests
+composer test            # run the unit and integration tests
 composer cs-check        # check coding standards
 composer cs-fix          # apply coding standards fixes
-composer test-coverage   # generate clover.xml coverage report
+composer test-coverage   # generate clover.xml coverage report (needs xdebug or pcov)
 ```
+
+The integration tests live under `test/Integration/` and use an in-memory
+SQLite database (via `pdo_sqlite`) so they run without external setup. Unit
+tests live alongside the corresponding `src` directory under `test/`.
 
 ## License
 
