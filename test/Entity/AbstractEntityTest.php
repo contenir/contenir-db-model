@@ -108,15 +108,15 @@ class AbstractEntityTest extends TestCase
         $this->assertFalse(isset($entity->missing));
     }
 
-    public function testUnsetRemovesValueWhenColumnExists(): void
+    public function testUnsetRemovesColumnFromData(): void
     {
         $entity = new TestEntity(['id' => 1, 'name' => 'Test']);
 
-        // __unset checks $this->columns which is keyed by integer in this class,
-        // so we test that the InvalidArgumentException is thrown for unknown
-        // columns rather than asserting positive removal here.
-        $this->expectException(InvalidArgumentException::class);
         unset($entity->name);
+
+        $this->assertFalse(isset($entity->name));
+        $this->assertArrayNotHasKey('name', $entity->getArrayCopy());
+        $this->assertArrayNotHasKey('name', $entity->getModifiedArrayCopy());
     }
 
     public function testUnsetThrowsForUnknownColumn(): void
@@ -150,7 +150,7 @@ class AbstractEntityTest extends TestCase
 
     public function testSynchClearsExistingDataThenPopulates(): void
     {
-        $entity        = new TestEntity(['id' => 1, 'name' => 'A', 'email' => 'a@example.com']);
+        $entity = new TestEntity(['id' => 1, 'name' => 'A', 'email' => 'a@example.com']);
 
         $entity->synch(['id' => 5, 'name' => 'fresh']);
 
@@ -158,6 +158,29 @@ class AbstractEntityTest extends TestCase
         $this->assertSame('fresh', $entity->name);
         // email was reset to null because synch resets state before populating
         $this->assertNull($entity->email);
+    }
+
+    public function testSynchLeavesEntityWithNoModifications(): void
+    {
+        $entity        = new TestEntity(['id' => 1, 'name' => 'A']);
+        $entity->name  = 'dirty';
+        $this->assertNotSame([], $entity->getModifiedArrayCopy());
+
+        $entity->synch(['id' => 5, 'name' => 'fresh']);
+
+        $this->assertSame([], $entity->getModifiedArrayCopy());
+    }
+
+    public function testMarkCleanDropsExistingModificationFlags(): void
+    {
+        $entity        = new TestEntity(['id' => 1, 'name' => 'A']);
+        $entity->name  = 'dirty';
+
+        $entity->markClean();
+
+        $this->assertSame([], $entity->getModifiedArrayCopy());
+        // values are preserved
+        $this->assertSame('dirty', $entity->name);
     }
 
     public function testGetModifiedArrayCopyExcludesRelationKeys(): void

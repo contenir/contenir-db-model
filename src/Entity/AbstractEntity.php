@@ -121,11 +121,11 @@ abstract class AbstractEntity implements EntityInterface
      */
     public function __unset(string $columnName): void
     {
-        if (! array_key_exists($columnName, $this->columns)) {
+        if (! array_key_exists($columnName, $this->data)) {
             throw new InvalidArgumentException("Specified column \"$columnName\" is not in the row");
         }
 
-        unset($this->data[$columnName]);
+        unset($this->data[$columnName], $this->modifiedDataFields[$columnName]);
     }
 
     /**
@@ -195,15 +195,37 @@ abstract class AbstractEntity implements EntityInterface
     }
 
     /**
-     * @param mixed $array
+     * Replace the entity's data with $array and mark every column as
+     * unmodified, treating the supplied data as the canonical state of the
+     * row (e.g. as just loaded from storage).
+     *
+     * @param iterable $array
      *
      * @return self Provides a fluent interface
      */
     public function synch(iterable $array): AbstractEntity
     {
         $this->reset();
+        $this->populate($array);
+        $this->markClean();
 
-        return $this->populate($array);
+        return $this;
+    }
+
+    /**
+     * Reset the modification tracking flags so that the current data is
+     * treated as the canonical state of the row. No data is modified.
+     *
+     * @return self Provides a fluent interface
+     */
+    public function markClean(): self
+    {
+        $this->modifiedDataFields = array_fill_keys(
+            array_keys($this->modifiedDataFields),
+            false
+        );
+
+        return $this;
     }
 
     /**
