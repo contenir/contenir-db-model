@@ -6,6 +6,7 @@ use ArrayObject;
 use Closure;
 use Contenir\Db\Model\Entity\AbstractEntity;
 use Contenir\Db\Model\Entity\EntityInterface;
+use Contenir\Db\Model\Hydrator\EntityHydrator;
 use Contenir\Db\Model\Hydrator\RelationsHydrator;
 use Laminas\Db\Adapter\Adapter;
 use Laminas\Db\Exception\RuntimeException;
@@ -19,7 +20,6 @@ use Laminas\Db\Sql\Update;
 use Laminas\Db\TableGateway\TableGatewayInterface;
 use Laminas\Hydrator\Aggregate\AggregateHydrator;
 use Laminas\Hydrator\HydratorInterface;
-use Laminas\Hydrator\ObjectPropertyHydrator;
 
 abstract class AbstractRepository implements TableGatewayInterface
 {
@@ -99,7 +99,7 @@ abstract class AbstractRepository implements TableGatewayInterface
         $relations = $this->entityPrototype->getRelations();
 
         $hydrator = new AggregateHydrator();
-        $hydrator->add(new ObjectPropertyHydrator());
+        $hydrator->add(new EntityHydrator());
 
         if (count($relations)) {
             $hydrator->add(new RelationsHydrator($this->repositoryLookup, $relations));
@@ -110,16 +110,7 @@ abstract class AbstractRepository implements TableGatewayInterface
 
     public function getResultSet(): ResultSetInterface
     {
-        $relations = $this->entityPrototype->getRelations();
-
-        $hydrator = new AggregateHydrator();
-        $hydrator->add(new ObjectPropertyHydrator());
-
-        if (count($relations)) {
-            $hydrator->add(new RelationsHydrator($this->repositoryLookup, $relations));
-        }
-
-        return new HydratingResultSet($hydrator, clone $this->entityPrototype);
+        return new HydratingResultSet($this->getHydrator(), clone $this->entityPrototype);
     }
 
     abstract public function create(iterable $data = []): EntityInterface;
