@@ -89,10 +89,12 @@ abstract class AbstractEntity implements EntityInterface
 
     public function getPrimaryKeys(): array
     {
-        return array_intersect_key(
-            $this->data,
-            array_combine($this->primaryKeys, $this->primaryKeys)
-        );
+        $result = [];
+        foreach ($this->primaryKeys as $key) {
+            $result[$key] = $this->data[$key] ?? null;
+        }
+
+        return $result;
     }
 
     /**

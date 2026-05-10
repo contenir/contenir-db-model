@@ -1,33 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Contenir\Db\Model\Repository;
 
-use Contenir\Db\Model\Entity\AbstractEntity;
 use Psr\Container\ContainerInterface;
 
+/**
+ * Thin handle around a PSR-11 container used by {@see \Contenir\Db\Model\Hydrator\RelationsHydrator}
+ * to resolve related repositories at relation-load time. A wrapper class is
+ * used (rather than injecting the container directly) so the hydrator does
+ * not need to be passed the entire container.
+ */
 class RepositoryLookup
 {
-    /**
-     * @var AbstractEntity|null
-     */
-    protected ?AbstractEntity $entityPrototype = null;
-
-    /**
-     * @var ContainerInterface|null
-     */
-    protected ?ContainerInterface $container;
-
-    /**
-     * @var array
-     */
-    protected array $entityRelations = [];
-
-    public function __construct(ContainerInterface $container)
+    public function __construct(private readonly ContainerInterface $container)
     {
-        $this->container = $container;
     }
 
-    public function getContainer(): ?ContainerInterface
+    public function getContainer(): ContainerInterface
     {
         return $this->container;
     }

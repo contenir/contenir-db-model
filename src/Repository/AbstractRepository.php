@@ -2,7 +2,6 @@
 
 namespace Contenir\Db\Model\Repository;
 
-use ArrayObject;
 use Closure;
 use Contenir\Db\Model\Entity\AbstractEntity;
 use Contenir\Db\Model\Entity\EntityInterface;
@@ -80,7 +79,7 @@ abstract class AbstractRepository implements TableGatewayInterface
         $this->repositoryLookup = $repositoryLookup;
     }
 
-    public function getTable(): string
+    public function getTable(): TableIdentifier|string|array|null
     {
         return $this->table;
     }
@@ -331,7 +330,7 @@ abstract class AbstractRepository implements TableGatewayInterface
 
     abstract public function findOne($where = null, $order = null, Sql\Select $select = null): ?EntityInterface;
 
-    public function findOneByField($fieldName, $value): EntityInterface|ArrayObject|array|null
+    public function findOneByField($fieldName, $value): ?EntityInterface
     {
         return $this->findByField($fieldName, $value)->current();
     }

@@ -63,6 +63,16 @@ class AbstractEntityTest extends TestCase
         );
     }
 
+    public function testGetPrimaryKeysReturnsExplicitNullForUnsetKey(): void
+    {
+        $entity = new TestEntity();
+
+        // The PK key is always present in the result; an auto-increment id
+        // that hasn't been assigned surfaces as null rather than vanishing
+        // from the array.
+        $this->assertSame(['id' => null], $entity->getPrimaryKeys());
+    }
+
     public function testGetThrowsWhenColumnIsNotInRow(): void
     {
         $entity = new TestEntity();

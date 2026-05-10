@@ -100,9 +100,16 @@ and PHP serialisation:
 $user        = new UserEntity(['id' => 1, 'email' => 'a@example.com']);
 $user->name  = 'Alice';
 
-$user->getModifiedArrayCopy(); // ['name' => 'Alice', ...]
-$user->getArrayCopy();         // full row, including null columns
-$user->getPrimaryKeys();       // ['id' => 1]
+// Constructor populates via __set, so every supplied column is flagged
+// modified — this is what tells save(MODE_INSERT) which columns to
+// write. Repositories call markClean() (or synch()) after a successful
+// load/save, so entities returned from find()/findOne() report only the
+// caller's subsequent changes:
+//   $user->getModifiedArrayCopy();
+//   // => ['id' => 1, 'email' => 'a@example.com', 'name' => 'Alice']
+
+$user->getArrayCopy();   // full row, including null columns
+$user->getPrimaryKeys(); // ['id' => 1] — auto-increment PKs come back as null until saved
 ```
 
 ### 2. Define a repository
