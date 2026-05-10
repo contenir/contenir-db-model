@@ -8,6 +8,7 @@ use Closure;
 use Contenir\Db\Model\Entity\AbstractEntity;
 use Contenir\Db\Model\Entity\EntityInterface;
 use Contenir\Db\Model\Exception\InvalidArgumentException;
+use Contenir\Db\Model\Exception\StaleEntityException;
 use Contenir\Db\Model\Hydrator\EntityHydrator;
 use Contenir\Db\Model\Hydrator\RelationsHydrator;
 use Laminas\Db\Adapter\Adapter;
@@ -19,12 +20,13 @@ use Laminas\Db\Sql\TableIdentifier;
 use Laminas\Db\TableGateway\TableGatewayInterface;
 use Laminas\Hydrator\Aggregate\AggregateHydrator;
 use Laminas\Hydrator\HydratorInterface;
+use Throwable;
 
-use function array_filter;
 use function array_keys;
 use function array_shift;
 use function array_values;
 use function count;
+use function implode;
 use function in_array;
 use function is_array;
 use function is_string;
@@ -32,6 +34,9 @@ use function iterator_to_array;
 use function key;
 use function sprintf;
 
+/**
+ * @template T of EntityInterface
+ */
 abstract class AbstractRepository implements TableGatewayInterface
 {
     public const MODE_AUTO   = 'auto';
@@ -45,7 +50,7 @@ abstract class AbstractRepository implements TableGatewayInterface
 
     protected Sql\Sql $sql;
 
-    /** @var AbstractEntity */
+    /** @var T */
     protected EntityInterface $entityPrototype;
 
     protected RepositoryLookup $repositoryLookup;
@@ -61,6 +66,20 @@ abstract class AbstractRepository implements TableGatewayInterface
     protected array $order = [];
 
     protected ?int $lastInsertValue = null;
+
+    /**
+     * Memoised aggregate hydrator. Built on first {@see self::getHydrator()}
+     * call and reused for the lifetime of the repository so the
+     * RelationsHydrator's per-instance FK cache spans every query the
+     * repository issues, not just one result set.
+     */
+    private ?HydratorInterface $hydrator = null;
+
+    /**
+     * Reference kept so {@see self::clearRelationsCache()} can invalidate
+     * the cache after writes without having to walk the AggregateHydrator.
+     */
+    private ?RelationsHydrator $relationsHydrator = null;
 
     public function __construct(
         Adapter $adapter,
@@ -90,16 +109,21 @@ abstract class AbstractRepository implements TableGatewayInterface
 
     public function getHydrator(): HydratorInterface
     {
-        $relations = $this->entityPrototype->getRelations();
+        if ($this->hydrator !== null) {
+            return $this->hydrator;
+        }
 
-        $hydrator = new AggregateHydrator();
+        $relations = $this->entityPrototype->getRelations();
+        $hydrator  = new AggregateHydrator();
         $hydrator->add(new EntityHydrator());
 
         if (count($relations)) {
-            $hydrator->add(new RelationsHydrator($this->repositoryLookup, $relations));
+            $this->relationsHydrator = new RelationsHydrator($this->repositoryLookup, $relations);
+            $hydrator->add($this->relationsHydrator);
         }
 
-        return $hydrator;
+        $this->hydrator = $hydrator;
+        return $this->hydrator;
     }
 
     public function getResultSet(): ResultSetInterface
@@ -107,36 +131,96 @@ abstract class AbstractRepository implements TableGatewayInterface
         return new HydratingResultSet($this->getHydrator(), clone $this->entityPrototype);
     }
 
+    /**
+     * Discard any cached relation lookups held by this repository's
+     * RelationsHydrator. Called automatically on writes from this
+     * repository; users should call it manually after writes that go
+     * through a different repository whose effects must be visible
+     * here.
+     */
+    public function clearRelationsCache(): void
+    {
+        $this->relationsHydrator?->clearCache();
+    }
+
+    /** @return T */
     abstract public function create(iterable $data = []): EntityInterface;
 
     /**
-     * @param EntityInterface $entity
-     * @param string          $mode
+     * Persist $entity as an INSERT or UPDATE. Modification tracking
+     * decides which columns the UPDATE path writes; for INSERT, all
+     * supplied columns are sent.
+     *
+     * The $refresh flag controls whether the entity is re-loaded from
+     * the database after the write so it picks up DB-computed defaults,
+     * triggers and concurrent writes. Default: false (single round-trip,
+     * apply the auto-generated PK locally and {@see AbstractEntity::markClean()}).
+     * Set true when you need the post-write database snapshot, at the
+     * cost of an extra SELECT and the implicit assumption that no
+     * concurrent writer changes the row between the INSERT/UPDATE and
+     * the refetch (the call is wrapped in a transaction in that case).
+     *
+     * For optimistic locking, declare {@see AbstractEntity::$versionColumn}
+     * on the entity. Update calls then use the loaded version as part
+     * of the WHERE predicate, bump it via
+     * {@see AbstractEntity::nextVersion()}, and throw
+     * {@see StaleEntityException} when the row no longer matches.
+     *
+     * @param T      $entity
+     * @param string $mode    one of MODE_AUTO, MODE_INSERT, MODE_UPDATE
+     * @param bool   $refresh re-load the entity from the database after writing
+     * @throws StaleEntityException When the entity is optimistically locked and the row has moved on.
      */
-    public function save($entity, $mode = self::MODE_AUTO): void
+    public function save($entity, $mode = self::MODE_AUTO, bool $refresh = false): void
     {
-        $data     = $entity->getModifiedArrayCopy();
-        $existing = $entity->getArrayCopy();
-
-        $primaryKeys = $entity->getPrimaryKeys();
-
-        if ($mode === self::MODE_AUTO) {
-            $mode = count(array_filter($primaryKeys)) === 0 ? self::MODE_INSERT : self::MODE_UPDATE;
+        if ($refresh) {
+            $this->transactional(function () use ($entity, $mode): void {
+                $this->writeAndRefresh($entity, $mode);
+            });
+            return;
         }
 
-        switch ($mode) {
-            case self::MODE_INSERT:
-                $this->insert($data);
-                if ($this->getLastInsertValue() && count($primaryKeys) === 1) {
-                    $data[key($primaryKeys)] = $this->getLastInsertValue();
-                }
-                break;
+        $this->writeAndMarkClean($entity, $mode);
+    }
 
-            case self::MODE_UPDATE:
-                if (count($data)) {
-                    $this->update($data, $primaryKeys);
-                }
-                break;
+    /**
+     * @param T $entity
+     */
+    private function writeAndMarkClean(EntityInterface $entity, string $mode): void
+    {
+        $data        = $entity->getModifiedArrayCopy();
+        $primaryKeys = $entity->getPrimaryKeys();
+        $resolved    = $this->resolveMode($mode, $primaryKeys);
+
+        if ($resolved === self::MODE_INSERT) {
+            $this->insert($data);
+            if ($this->getLastInsertValue() && count($primaryKeys) === 1) {
+                $entity->{key($primaryKeys)} = $this->getLastInsertValue();
+            }
+        } elseif (count($data) > 0) {
+            $this->updateWithLocking($entity, $data, $primaryKeys);
+        }
+
+        $entity->markClean();
+    }
+
+    /**
+     * @param T $entity
+     */
+    private function writeAndRefresh(EntityInterface $entity, string $mode): void
+    {
+        $data        = $entity->getModifiedArrayCopy();
+        $existing    = $entity->getArrayCopy();
+        $primaryKeys = $entity->getPrimaryKeys();
+        $resolved    = $this->resolveMode($mode, $primaryKeys);
+
+        if ($resolved === self::MODE_INSERT) {
+            $this->insert($data);
+            if ($this->getLastInsertValue() && count($primaryKeys) === 1) {
+                $data[key($primaryKeys)] = $this->getLastInsertValue();
+            }
+        } elseif (count($data) > 0) {
+            $this->updateWithLocking($entity, $data, $primaryKeys);
         }
 
         $newPrimaryKeys = [];
@@ -148,6 +232,120 @@ abstract class AbstractRepository implements TableGatewayInterface
     }
 
     /**
+     * Apply optimistic-locking semantics if the entity declares a
+     * version column; otherwise issue a plain UPDATE. Throws
+     * {@see StaleEntityException} when an opt-in version check finds
+     * zero rows.
+     *
+     * @param T                    $entity
+     * @param array<string, mixed> $data        modified columns to write
+     * @param array<string, mixed> $primaryKeys
+     */
+    private function updateWithLocking(EntityInterface $entity, array $data, array $primaryKeys): void
+    {
+        $versionColumn = $entity->getVersionColumn();
+        if ($versionColumn === null) {
+            $this->update($data, $primaryKeys);
+            return;
+        }
+
+        $existing = $entity->getArrayCopy();
+        $loaded   = $existing[$versionColumn] ?? null;
+        $where    = $primaryKeys + [$versionColumn => $loaded];
+
+        $data[$versionColumn] = $entity->nextVersion($loaded);
+
+        $affected = $this->update($data, $where);
+        if ($affected !== 1) {
+            throw new StaleEntityException(sprintf(
+                'Optimistic-lock failure: row matching %s with %s = %s no longer exists',
+                self::primaryKeysToString($primaryKeys),
+                $versionColumn,
+                self::scalarToString($loaded)
+            ));
+        }
+
+        $entity->{$versionColumn} = $data[$versionColumn];
+    }
+
+    /**
+     * @param array<string, mixed> $primaryKeys
+     */
+    private function resolveMode(string $mode, array $primaryKeys): string
+    {
+        if ($mode !== self::MODE_AUTO) {
+            return $mode;
+        }
+
+        // UPDATE only when every PK column carries a non-null value.
+        // Falls back to INSERT for unsaved rows, partially-set composite
+        // keys, and explicitly unassigned PKs. Treats 0 / '0' / '' as
+        // legitimate PK values rather than as "unsaved".
+        if ($primaryKeys === [] || in_array(null, $primaryKeys, true)) {
+            return self::MODE_INSERT;
+        }
+
+        return self::MODE_UPDATE;
+    }
+
+    /**
+     * Run $fn inside a database transaction. Re-entrant: nested calls on
+     * a connection that is already in a transaction join the existing
+     * one and only the outermost frame commits or rolls back.
+     *
+     * @template R
+     * @param callable(): R $fn
+     * @return R
+     */
+    public function transactional(callable $fn): mixed
+    {
+        $connection = $this->adapter->getDriver()->getConnection();
+        $isNested   = $connection->inTransaction();
+
+        if (! $isNested) {
+            $connection->beginTransaction();
+        }
+
+        try {
+            $result = $fn();
+        } catch (Throwable $e) {
+            if (! $isNested) {
+                $connection->rollback();
+            }
+            throw $e;
+        }
+
+        if (! $isNested) {
+            $connection->commit();
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $primaryKeys
+     */
+    private static function primaryKeysToString(array $primaryKeys): string
+    {
+        $parts = [];
+        foreach ($primaryKeys as $name => $value) {
+            $parts[] = $name . '=' . self::scalarToString($value);
+        }
+        return '[' . implode(', ', $parts) . ']';
+    }
+
+    private static function scalarToString(mixed $value): string
+    {
+        if ($value === null) {
+            return 'null';
+        }
+        if (is_string($value)) {
+            return "'$value'";
+        }
+        return (string) $value;
+    }
+
+    /**
      * @param array $set
      */
     public function insert(
@@ -156,7 +354,9 @@ abstract class AbstractRepository implements TableGatewayInterface
         $insert = $this->sql->insert();
         $insert->values($set);
 
-        return $this->executeInsert($insert);
+        $affected = $this->executeInsert($insert);
+        $this->clearRelationsCache();
+        return $affected;
     }
 
     /**
@@ -167,6 +367,9 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $this->lastInsertValue;
     }
 
+    /**
+     * @param T $entity
+     */
     public function synch(AbstractEntity $entity, ?array $primaryKeys = null): void
     {
         if ($primaryKeys === null) {
@@ -235,7 +438,9 @@ abstract class AbstractRepository implements TableGatewayInterface
             }
         }
 
-        return $this->executeUpdate($update);
+        $affected = $this->executeUpdate($update);
+        $this->clearRelationsCache();
+        return $affected;
     }
 
     /**
@@ -274,6 +479,9 @@ abstract class AbstractRepository implements TableGatewayInterface
         return $this->sql->select();
     }
 
+    /**
+     * @return iterable<T>&ResultSetInterface
+     */
     public function selectWith(Sql\Select $select): ResultSetInterface
     {
         $statement = $this->sql->prepareStatementForSqlObject($select);
@@ -298,7 +506,9 @@ abstract class AbstractRepository implements TableGatewayInterface
             $delete->where($where);
         }
 
-        return $this->executeDelete($delete);
+        $affected = $this->executeDelete($delete);
+        $this->clearRelationsCache();
+        return $affected;
     }
 
     /**
@@ -331,12 +541,14 @@ abstract class AbstractRepository implements TableGatewayInterface
     /**
      * @param Closure|array|string|int|null $where
      * @param array|string|null             $order
+     * @return T|null
      */
     abstract public function findOne($where = null, $order = null, ?Sql\Select $select = null): ?EntityInterface;
 
     /**
      * @param string $fieldName
      * @param mixed  $value
+     * @return T|null
      */
     public function findOneByField($fieldName, $value): ?EntityInterface
     {
@@ -477,6 +689,7 @@ abstract class AbstractRepository implements TableGatewayInterface
     /**
      * @param Closure|array|string|int|null $where
      * @param array|string|null             $order
+     * @return iterable<T>&ResultSetInterface
      */
     public function find($where = null, $order = null, ?Sql\Select $select = null): ResultSetInterface
     {
@@ -499,6 +712,7 @@ abstract class AbstractRepository implements TableGatewayInterface
      * @param Closure|array|null    $where
      * @param array|string|null     $order
      * @param Sql\Select|null       $select
+     * @return iterable<T>&ResultSetInterface
      */
     public function findByField($fieldName, $value, $where = [], $order = null, $select = null): ResultSetInterface
     {

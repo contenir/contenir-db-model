@@ -188,6 +188,48 @@ $users->save($user, AbstractRepository::MODE_INSERT);
 $users->save($user, AbstractRepository::MODE_UPDATE);
 ```
 
+By default `save()` issues a single statement and applies the
+auto-generated PK locally — no post-write SELECT. Pass `refresh: true`
+when the entity needs to pick up DB-computed defaults, triggers or
+concurrent writes; the INSERT/UPDATE and refresh SELECT are then
+wrapped in a transaction:
+
+```php
+$users->save($user, refresh: true);
+```
+
+For long-running scripts or when several statements need to be atomic,
+wrap them with `transactional()`. Calls are re-entrant — nested
+`transactional()` invocations join the outer transaction, and only the
+outermost frame commits or rolls back:
+
+```php
+$users->transactional(function () use ($users, $orders, $user, $order) {
+    $users->save($user);
+    $orders->save($order);
+});
+```
+
+### Optimistic locking
+
+Declare a `versionColumn` on an entity to opt into optimistic
+concurrency control:
+
+```php
+class WidgetEntity extends AbstractEntity
+{
+    protected array $columns       = ['id', 'name', 'version'];
+    protected ?string $versionColumn = 'version';
+}
+```
+
+`save()` then issues `UPDATE … WHERE pk = ? AND version = :loaded`,
+bumps the version through `nextVersion()`, and throws
+`Contenir\Db\Model\Exception\StaleEntityException` when the row no
+longer matches its loaded version (concurrently updated or deleted).
+Override `AbstractEntity::nextVersion()` for non-integer schemes
+(e.g. `microtime`-based timestamps).
+
 ### 4. Lazy-loaded relations
 
 Relations declared on the entity are fetched on first access. Internally the

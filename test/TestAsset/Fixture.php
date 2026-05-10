@@ -40,6 +40,13 @@ class Fixture
                 user_id INTEGER NOT NULL,
                 tag_id INTEGER NOT NULL
             )',
+            'CREATE TABLE versioned_widgets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                version INTEGER NOT NULL DEFAULT 1
+            )',
+            "INSERT INTO versioned_widgets (id, name, version) VALUES
+                (1, 'Widget', 1)",
             "INSERT INTO users (id, email, name) VALUES
                 (1, 'alice@example.com', 'Alice'),
                 (2, 'bob@example.com', 'Bob')",

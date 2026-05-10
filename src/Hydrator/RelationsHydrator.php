@@ -77,6 +77,15 @@ class RelationsHydrator extends ObjectPropertyHydrator
     }
 
     /**
+     * Drop any cached relation lookups. Call this after a write whose
+     * effects should be visible on subsequent relation accesses.
+     */
+    public function clearCache(): void
+    {
+        $this->cache = [];
+    }
+
+    /**
      * Stable key for the (relation, fk-values) pair so duplicate lookups
      * on different rows that point at the same target hit the cache.
      */

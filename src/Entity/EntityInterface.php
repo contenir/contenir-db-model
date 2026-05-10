@@ -69,4 +69,15 @@ interface EntityInterface extends EventManagerAwareInterface
      * canonical state of the row.
      */
     public function markClean(): self;
+
+    /**
+     * Name of the optimistic-locking version column, or null when this
+     * entity opts out of optimistic locking.
+     */
+    public function getVersionColumn(): ?string;
+
+    /**
+     * Compute the next version value given the current one.
+     */
+    public function nextVersion(mixed $current): mixed;
 }

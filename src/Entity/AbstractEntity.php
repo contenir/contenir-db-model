@@ -56,6 +56,14 @@ abstract class AbstractEntity implements EntityInterface
     protected array $relations = [];
 
     /**
+     * Optional name of an integer / numeric column used for optimistic
+     * concurrency control. When set, repository UPDATEs use the column's
+     * current value as part of the WHERE predicate and bump it through
+     * {@see self::nextVersion()} on each successful write.
+     */
+    protected ?string $versionColumn = null;
+
+    /**
      * EventsManager
      *
      * @var EventManager
@@ -289,5 +297,23 @@ abstract class AbstractEntity implements EntityInterface
     public function getColumns(): array
     {
         return array_values($this->columns);
+    }
+
+    /**
+     * Name of the optimistic-locking version column, or null if optimistic
+     * locking is not enabled for this entity.
+     */
+    public function getVersionColumn(): ?string
+    {
+        return $this->versionColumn;
+    }
+
+    /**
+     * Compute the next version value given the current one. Override on
+     * subclasses with non-integer version semantics (e.g. timestamps).
+     */
+    public function nextVersion(mixed $current): mixed
+    {
+        return ((int) $current) + 1;
     }
 }
