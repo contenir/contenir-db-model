@@ -1,0 +1,27 @@
+# contenir-db-model
+
+> PHP 8.3+ data mapper built on php-db/phpdb 0.6. Entities are plain classes with typed properties, mapped with attributes from `Contenir\Db\Model\Mapping`. There are no base classes and no magic accessors. Version 2.x is a ground-up rewrite and is incompatible with 1.x, which used AbstractEntity, __get/__set, $columns arrays and laminas-db.
+
+Key facts for code generation:
+
+- An entity needs `#[Table('name')]` and at least one `#[Id]`. Only properties with `#[Column]`, `#[Id]` or `#[Version]` are persisted.
+- Column names default to the property name exactly, with no snake_case conversion. Use `#[Column('created_at')]` to map a different column name.
+- Relation keys are column names. `HasOne`/`HasMany` take `foreignKey` (a target column). `BelongsTo` takes `foreignKey` (a column on this entity). `ManyToMany` takes `via: new Via(table, foreignKey:, relatedKey:)`.
+- `#[Version]` must be a non-nullable `int`. Generated ids and versions cannot be `readonly`.
+- Invalid mappings throw `Contenir\Db\Model\Exception\MappingException` when metadata is first built.
+- Use `CachedMetadataFactory` (PSR-16) in production. Clear its cache on deploy.
+
+## Docs
+
+- [Mapping entities](docs/mapping.md): every attribute and parameter, key defaults, validation rules, and the EntityMetadata API
+- [Metadata caching](docs/metadata-caching.md): CachedMetadataFactory, cache keys, failure behaviour, invalidation
+
+## Source
+
+- [Mapping attributes](src/Mapping/): Table, Column, Id, Version, HasOne, HasMany, BelongsTo, ManyToMany, Via
+- [Metadata](src/Metadata/): AttributeMetadataFactory, CachedMetadataFactory, EntityMetadata, FieldMetadata, RelationMetadata
+- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, StaleEntityException
+
+## Optional
+
+- [Test fixtures](tests/TestAsset/Entity/): small example entities (User, Order, Profile, Tag, Membership) covering every mapping feature
