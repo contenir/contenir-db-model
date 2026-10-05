@@ -1,0 +1,74 @@
+# contenir-db-model
+
+> PHP 8.3+ data mapper built on php-db/phpdb 0.6. Entities are plain classes with typed properties, mapped with attributes from `Contenir\Db\Model\Mapping`. There are no base classes and no magic accessors. Version 2.x is a ground-up rewrite and is incompatible with 1.x, which used AbstractEntity, __get/__set, $columns arrays and laminas-db.
+
+Key facts for code generation:
+
+- An entity needs `#[Table('name')]` and at least one `#[Id]`. Only properties with `#[Column]`, `#[Id]` or `#[Version]` are persisted.
+- Column names default to the property name exactly, with no snake_case conversion. Use `#[Column('created_at')]` to map a different column name.
+- Relations: to-many properties are typed `Collection` (lazy, read-only, loads once); to-one properties are typed as the target class (nullable if optional). NO default value on relation properties. To-one lazy loading needs `use LazyRelationsTrait;` on the entity; otherwise preload. Avoid N+1 with `$repo->preload($entities, 'orders.user', 'profile')`. Relations are never written: save the child with its foreign key.
+- Relation keys are column names. `HasOne`/`HasMany` take `foreignKey` (a target column). `BelongsTo` takes `foreignKey` (a column on this entity). `ManyToMany` takes `via: new Via(table, foreignKey:, relatedKey:)`.
+- `#[Version]` must be a non-nullable `int`. Generated ids and versions cannot be `readonly`.
+- Invalid mappings throw `Contenir\Db\Model\Exception\MappingException` when metadata is first built.
+- Use `CachedMetadataFactory` (PSR-16) in production. Clear its cache on deploy.
+- Types: `int`/`float`/`string`/`bool`, any `BackedEnum` and any `DateTimeInterface` convert automatically. `array` needs `#[Column(type: 'json')]`. A date-only column uses `#[Column(type: 'date')]`. Custom converters go through `TypeRegistry::withDefaults()->withConverter($nameOrClass, $converter)`.
+- A database NULL loaded into a non-nullable property throws `TypeConversionException`. Declare nullable columns as `?type`.
+- Entity constructors are NOT called when loading. Property defaults apply, and mapped properties may be private, protected or readonly (inherited ones too).
+- Secrets (password hashes, tokens): type the property as `Contenir\Db\Model\Value\SensitiveString`. It's stored as text, redacted in var_dump/print_r, and read with `->reveal()`; it has no __toString. `#[Column(sensitive: true)]` only redacts the library's own messages. `#[\SensitiveParameter]` does not work on properties.
+- Identity map: one object per (class, primary key) per entity manager. Every select that loads entities must include the primary-key columns, or `HydrationException` is thrown. A re-loaded row returns the existing object unchanged (in-memory edits win). Long-running workers must call `clear()` between jobs.
+- Writes: `$em = new EntityManager($adapter)`. `$em->save($e)` inserts unmanaged entities and updates managed ones (changed columns only; nothing changed means no SQL). Also `saveAndRefresh`, `delete`, `refresh`, `transactional(fn)`, `contains`, `clear`. There is no flush step: every call writes immediately.
+- Reads: `$em->getRepository(User::class)` gives `find($id)` (scalar, or `['prop' => v]` for composite keys; no query if already loaded), `findOneBy`, `findBy($criteria, $orderBy, $limit, $offset)`, `count`, `stream` (find/findOneBy/findBy/stream also take an optional base `Select` as their last argument: cloned, columns qualified, find() then always queries), `createSelect()` plus `fetch(Select)`/`fetchOne`. Criteria and ordering use PROPERTY names; values may be enum cases or backing values, DateTimes, lists (IN) or null (IS NULL). Raw `Select` conditions use COLUMN names. Custom repositories extend `Repository` and call `parent::__construct($em, Entity::class)`.
+- Container: the `ConfigProvider` registers `EntityManager`, `MetadataFactoryInterface` and `TypeRegistry` factories. Config lives under `contenir_db_model`, with keys `adapter`, `metadata_cache`, `metadata_cache_ttl` and `types` (name or class => converter SERVICE). Custom repositories register with `Container\RepositoryFactory`. Long-running servers must `clear()` the shared EntityManager per request.
+- `#[Version]` guards updates and deletes. A concurrent change throws `StaleEntityException`. A rolled-back `transactional()` restores entity tracking, so retries work.
+- Saves write only the columns that changed since load. Changes are compared in database form, so an equal DateTime or the same enum case is not a change.
+
+## Do not use 1.x APIs
+
+These no longer exist in 2.x. Use the replacement:
+
+- `AbstractEntity`/`BaseEntity`, `$columns`/`$primaryKeys`/`$relations` arrays → a plain class with `#[Table]`, `#[Id]`, `#[Column]` and relation attributes.
+- `AbstractRepository`/`BaseRepository`, `RepositoryLookup` → `$em->getRepository(Entity::class)` or a `Repository` subclass.
+- `$repo->save()`/`delete()`/`transactional()`, `MODE_INSERT`/`MODE_UPDATE` → `$em->save()`/`delete()`/`transactional()`, with insert vs update decided automatically.
+- `find($where)`/`findByField($col, $v)` with column names → `findBy(['property' => $v])`.
+- `getArrayCopy()`/`populate()`/`exchangeArray()`/`synch()`/`markClean()` → none. Use properties; the manager tracks changes.
+- `preloadRelations($e, [...])` → `$repo->preload($e, 'a', 'b.c')`.
+- A missing single relation used to be `false`; it is now `null`. A to-many relation used to be an array; it is now a `Collection`.
+- `Laminas\Db\…` → `PhpDb\…`. Config key `model` → `contenir_db_model`.
+
+## Docs
+
+- [Upgrade guide](UPGRADE-2.0.md): every 1.x API mapped to 2.x, plus a checklist
+- [contenir-db-model-tools](https://github.com/contenir/contenir-db-model-tools): `entity:generate` (entities from live tables), `entity:upgrade` (convert 1.x entities in place), `mapping:validate` (check mappings against the schema)
+- [Changelog](CHANGELOG.md)
+
+- [Mapping entities](docs/mapping.md): every attribute and parameter, key defaults, validation rules, and the EntityMetadata API
+- [Metadata caching](docs/metadata-caching.md): CachedMetadataFactory, cache keys, failure behaviour, invalidation
+- [Type conversion](docs/types.md): built-in converters and their accepted inputs, resolution order, nulls, custom converters
+- [Sensitive data](docs/sensitive-data.md): SensitiveString value object, the sensitive column flag, and their limits
+- [Container integration](docs/container.md): ConfigProvider, factories, configuration keys, custom repository registration, EntityManager lifetime
+- [Relations](docs/relations.md): Collection, LazyRelationsTrait, preload(), staleness, what errors mean
+- [Repositories and finders](docs/repositories.md): finder methods, criteria rules, streaming, custom selects, custom repository subclasses
+- [Persisting entities](docs/persistence.md): EntityManager API, insert/update rules, optimistic locking, transactions and rollback behaviour
+- [Identity map](docs/identity-map.md): instance sharing, key normalisation, required primary-key columns, clearing in workers
+- [Entity lifecycle](docs/entity-lifecycle.md): how rows become entities, refresh rules for readonly properties, snapshot-based change tracking
+
+## Source
+
+- [Mapping attributes](src/Mapping/): Table, Column, Id, Version, HasOne, HasMany, BelongsTo, ManyToMany, Via
+- [Metadata](src/Metadata/): AttributeMetadataFactory, CachedMetadataFactory, EntityMetadata, FieldMetadata, RelationMetadata
+- [Types](src/Type/): TypeRegistry, TypeConverterInterface and the built-in converters
+- [Values](src/Value/): SensitiveString
+- [Hydrator](src/Hydrator/): EntityHydrator, ChangeTracker, PropertyAccessor (internal)
+- [EntityManager](src/EntityManager.php): the public write API and `getRepository()`
+- [Repository](src/Repository.php): the public read API including `preload()`, extendable
+- [Collection](src/Collection.php) and [LazyRelationsTrait](src/Relation/LazyRelationsTrait.php): relation access
+- [Relation](src/Relation/): loader, initializer, preloader (internal)
+- [Query](src/Query/): CriteriaTranslator, EntityReader (internal)
+- [Container](src/Container/): EntityManagerFactory, MetadataFactoryFactory, TypeRegistryFactory, RepositoryFactory
+- [Persistence](src/Persistence/): persister, remover, refresher, transactions, rollback journal (internal)
+- [Identity](src/Identity/): IdentityMap, IdentifierResolver, EntityLoader (internal)
+- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, TypeConversionException, HydrationException, IdentityConflictException, PersistenceException, QueryException, RelationException, ConfigurationException, StaleEntityException
+
+## Optional
+
+- [Test fixtures](tests/TestAsset/Entity/): small example entities (User, Order, Profile, Tag, Membership, Permission, Note, Account, Ticket) covering every mapping feature

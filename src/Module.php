@@ -4,18 +4,27 @@ declare(strict_types=1);
 
 namespace Contenir\Db\Model;
 
-class Module
+use Contenir\Db\Model\Container\ModuleConfig;
+
+/**
+ * laminas-mvc module: exposes the {@see ConfigProvider} services under the
+ * "service_manager" key that laminas-mvc reads.
+ *
+ * @api
+ */
+final readonly class Module
 {
     /**
-     * Retrieve default laminas-paginator config for laminas-mvc context.
+     * @return array<string, mixed>
      */
     public function getConfig(): array
     {
         $provider = new ConfigProvider();
+        $config   = $provider();
 
         return [
-            'service_manager' => $provider->getDependencyConfig(),
-            'model'           => $provider->getDbModelConfig(),
+            'service_manager' => $provider->getDependencies(),
+            ModuleConfig::KEY => $config[ModuleConfig::KEY],
         ];
     }
 }

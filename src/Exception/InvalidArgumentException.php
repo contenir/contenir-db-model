@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Contenir\Db\Model\Exception;
 
-class InvalidArgumentException extends \InvalidArgumentException implements ExceptionInterface
-{
-}
+use InvalidArgumentException as SplInvalidArgumentException;
+
+/**
+ * @api
+ */
+class InvalidArgumentException extends SplInvalidArgumentException implements ExceptionInterface {}
