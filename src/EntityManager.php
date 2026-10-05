@@ -24,6 +24,10 @@ use Contenir\Db\Model\Persistence\WriteJournal;
 use Contenir\Db\Model\Query\CriteriaTranslator;
 use Contenir\Db\Model\Query\EntityReader;
 use Contenir\Db\Model\Query\QueryContext;
+use Contenir\Db\Model\Relation\Preloader;
+use Contenir\Db\Model\Relation\RelationInitializer;
+use Contenir\Db\Model\Relation\RelationLoader;
+use Contenir\Db\Model\Relation\RowGroupKey;
 use Contenir\Db\Model\Type\TypeRegistry;
 use PhpDb\Adapter\AdapterInterface;
 use Throwable;
@@ -66,22 +70,33 @@ final class EntityManager
         $this->session      = Session::create($types);
         $journal            = new WriteJournal($this->session);
         $statements         = new StatementRunner($adapter);
-        $this->persister    = new EntityPersister($statements, $this->session, $types, $journal);
+        $relations          = new RelationInitializer($this->session->accessor);
+        $this->persister    = new EntityPersister($statements, $this->session, $types, $journal, $relations);
         $this->remover      = new EntityRemover($statements, $this->session, $journal);
         $rows               = new RowFetcher($adapter);
-        $this->refresher    = new EntityRefresher($rows, $this->session, $journal);
+        $this->refresher    = new EntityRefresher($rows, $this->session, $journal, $relations);
         $this->transactions = new TransactionManager($adapter, $journal);
         $loader             = new EntityLoader(
             $this->session->hydrator,
             $this->session->tracker,
             $this->session->identityMap,
             $this->session->identifiers,
+            $relations,
         );
+        $relationLoader = new RelationLoader(
+            $this->metadata,
+            $rows,
+            $loader,
+            $this->session->hydrator,
+            new RowGroupKey($types),
+        );
+        $relations->attach($relationLoader);
         $this->queryContext = new QueryContext(
             $this->metadata,
             new EntityReader($rows, $loader),
             new CriteriaTranslator($types),
             $this->session->identityMap,
+            new Preloader($this->metadata, $relationLoader, $relations),
         );
     }
 

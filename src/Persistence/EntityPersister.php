@@ -11,6 +11,7 @@ use Contenir\Db\Model\Exception\StaleEntityException;
 use Contenir\Db\Model\Exception\TypeConversionException;
 use Contenir\Db\Model\Metadata\EntityMetadata;
 use Contenir\Db\Model\Metadata\FieldMetadata;
+use Contenir\Db\Model\Relation\RelationInitializer;
 use Contenir\Db\Model\Type\TypeRegistry;
 
 /**
@@ -26,6 +27,7 @@ final readonly class EntityPersister
         private Session $session,
         private TypeRegistry $types,
         private WriteJournal $journal,
+        private RelationInitializer $relations,
     ) {}
 
     /**
@@ -67,6 +69,7 @@ final readonly class EntityPersister
             $entity,
             $identifier ?? $this->session->requireIdentifier('insert', $metadata, $entity),
         );
+        $this->relations->initialize($metadata, $entity);
     }
 
     /**

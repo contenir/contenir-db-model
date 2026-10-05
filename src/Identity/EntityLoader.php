@@ -10,6 +10,7 @@ use Contenir\Db\Model\Exception\TypeConversionException;
 use Contenir\Db\Model\Hydrator\ChangeTracker;
 use Contenir\Db\Model\Hydrator\EntityHydrator;
 use Contenir\Db\Model\Metadata\EntityMetadata;
+use Contenir\Db\Model\Relation\RelationInitializer;
 
 /**
  * Turns rows into managed entities: the identity map is consulted first,
@@ -29,6 +30,7 @@ final readonly class EntityLoader
         private ChangeTracker $tracker,
         private IdentityMap $identityMap,
         private IdentifierResolver $identifiers,
+        private RelationInitializer $relations,
     ) {}
 
     /**
@@ -54,6 +56,7 @@ final readonly class EntityLoader
         $entity = $this->hydrator->hydrate($metadata, $row);
         $this->identityMap->add($metadata->className, $identifier, $entity);
         $this->tracker->snapshot($metadata, $entity);
+        $this->relations->initialize($metadata, $entity);
 
         return $entity;
     }

@@ -6,6 +6,7 @@ Key facts for code generation:
 
 - An entity needs `#[Table('name')]` and at least one `#[Id]`. Only properties with `#[Column]`, `#[Id]` or `#[Version]` are persisted.
 - Column names default to the property name exactly, with no snake_case conversion. Use `#[Column('created_at')]` to map a different column name.
+- Relations: to-many properties are typed `Collection` (lazy, read-only, loads once); to-one properties are typed as the target class (nullable if optional). NO default value on relation properties. To-one lazy loading needs `use LazyRelationsTrait;` on the entity; otherwise preload. Avoid N+1 with `$repo->preload($entities, 'orders.user', 'profile')`. Relations are never written: save the child with its foreign key.
 - Relation keys are column names. `HasOne`/`HasMany` take `foreignKey` (a target column). `BelongsTo` takes `foreignKey` (a column on this entity). `ManyToMany` takes `via: new Via(table, foreignKey:, relatedKey:)`.
 - `#[Version]` must be a non-nullable `int`. Generated ids and versions cannot be `readonly`.
 - Invalid mappings throw `Contenir\Db\Model\Exception\MappingException` when metadata is first built.
@@ -28,6 +29,7 @@ Key facts for code generation:
 - [Type conversion](docs/types.md): built-in converters and their accepted inputs, resolution order, nulls, custom converters
 - [Sensitive data](docs/sensitive-data.md): SensitiveString value object, the sensitive column flag, and their limits
 - [Container integration](docs/container.md): ConfigProvider, factories, configuration keys, custom repository registration, EntityManager lifetime
+- [Relations](docs/relations.md): Collection, LazyRelationsTrait, preload(), staleness, what errors mean
 - [Repositories and finders](docs/repositories.md): finder methods, criteria rules, streaming, custom selects, custom repository subclasses
 - [Persisting entities](docs/persistence.md): EntityManager API, insert/update rules, optimistic locking, transactions and rollback behaviour
 - [Identity map](docs/identity-map.md): instance sharing, key normalisation, required primary-key columns, clearing in workers
@@ -41,13 +43,15 @@ Key facts for code generation:
 - [Values](src/Value/): SensitiveString
 - [Hydrator](src/Hydrator/): EntityHydrator, ChangeTracker, PropertyAccessor (internal)
 - [EntityManager](src/EntityManager.php): the public write API and `getRepository()`
-- [Repository](src/Repository.php): the public read API, extendable
+- [Repository](src/Repository.php): the public read API including `preload()`, extendable
+- [Collection](src/Collection.php) and [LazyRelationsTrait](src/Relation/LazyRelationsTrait.php): relation access
+- [Relation](src/Relation/): loader, initializer, preloader (internal)
 - [Query](src/Query/): CriteriaTranslator, EntityReader (internal)
 - [Container](src/Container/): EntityManagerFactory, MetadataFactoryFactory, TypeRegistryFactory, RepositoryFactory
 - [Persistence](src/Persistence/): persister, remover, refresher, transactions, rollback journal (internal)
 - [Identity](src/Identity/): IdentityMap, IdentifierResolver, EntityLoader (internal)
-- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, TypeConversionException, HydrationException, IdentityConflictException, PersistenceException, QueryException, ConfigurationException, StaleEntityException
+- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, TypeConversionException, HydrationException, IdentityConflictException, PersistenceException, QueryException, RelationException, ConfigurationException, StaleEntityException
 
 ## Optional
 
-- [Test fixtures](tests/TestAsset/Entity/): small example entities (User, Order, Profile, Tag, Membership, Note, Account) covering every mapping feature
+- [Test fixtures](tests/TestAsset/Entity/): small example entities (User, Order, Profile, Tag, Membership, Permission, Note, Account, Ticket) covering every mapping feature

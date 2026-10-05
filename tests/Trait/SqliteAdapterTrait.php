@@ -8,10 +8,13 @@ use PDO;
 use PhpDb\Adapter\Adapter;
 use PhpDb\Adapter\AdapterInterface;
 use PhpDb\Adapter\Driver\Pdo\Statement;
+use PhpDb\Adapter\Profiler\Profiler;
 use PhpDb\Sqlite\AdapterPlatform;
 use PhpDb\Sqlite\Pdo\Connection;
 use PhpDb\Sqlite\Pdo\Driver;
 use PhpDb\Sqlite\Pdo\Feature\SqliteRowCounter;
+
+use function count;
 
 /**
  * Builds a fresh in-memory SQLite adapter per test so no state survives
@@ -19,9 +22,33 @@ use PhpDb\Sqlite\Pdo\Feature\SqliteRowCounter;
  */
 trait SqliteAdapterTrait
 {
-    private AdapterInterface $adapter;
+    protected AdapterInterface $adapter;
 
-    private PDO $pdo;
+    protected PDO $pdo;
+
+    protected Profiler $profiler;
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    protected function fetchAll(string $sql): array
+    {
+        $statement = $this->pdo->query($sql);
+        if (false === $statement) {
+            return [];
+        }
+
+        /** @var list<array<string, mixed>> */
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Statements executed through the adapter so far.
+     */
+    protected function queryCount(): int
+    {
+        return count($this->profiler->getProfiles());
+    }
 
     protected function setUpSqliteAdapter(string ...$schema): void
     {
@@ -47,20 +74,7 @@ trait SqliteAdapterTrait
             features: [new SqliteRowCounter()],
         );
 
-        $this->adapter = new Adapter($driver, new AdapterPlatform($driver));
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function fetchAll(string $sql): array
-    {
-        $statement = $this->pdo->query($sql);
-        if (false === $statement) {
-            return [];
-        }
-
-        /** @var list<array<string, mixed>> */
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+        $this->profiler = new Profiler();
+        $this->adapter  = new Adapter($driver, new AdapterPlatform($driver), profiler: $this->profiler);
     }
 }

@@ -7,6 +7,7 @@ namespace ContenirTest\Db\Model\Unit\Hydrator;
 use Contenir\Db\Model\Exception\HydrationException;
 use Contenir\Db\Model\Hydrator\PropertyAccessor;
 use ContenirTest\Db\Model\TestAsset\Entity\Note;
+use ContenirTest\Db\Model\TestAsset\Entity\User;
 use ContenirTest\Db\Model\TestAsset\Entity\Widget;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
@@ -63,6 +64,17 @@ final class PropertyAccessorTest extends TestCase
         $this->accessor->set($note, 'body', 'hello');
 
         static::assertSame([false, true], [$before, $this->accessor->isInitialized($note, 'body')]);
+    }
+
+    #[Test]
+    public function reportsWhetherPropertyTypeAllowsNull(): void
+    {
+        $user = new User();
+
+        static::assertSame([true, false], [
+            $this->accessor->allowsNull($user, 'profile'),
+            $this->accessor->allowsNull($user, 'email'),
+        ]);
     }
 
     #[Test]

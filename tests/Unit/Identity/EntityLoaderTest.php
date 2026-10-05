@@ -12,6 +12,7 @@ use Contenir\Db\Model\Identity\IdentifierResolver;
 use Contenir\Db\Model\Identity\IdentityMap;
 use Contenir\Db\Model\Metadata\AttributeMetadataFactory;
 use Contenir\Db\Model\Metadata\EntityMetadata;
+use Contenir\Db\Model\Relation\RelationInitializer;
 use Contenir\Db\Model\Type\TypeRegistry;
 use ContenirTest\Db\Model\TestAsset\Entity\User;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -92,6 +93,7 @@ final class EntityLoaderTest extends TestCase
             $this->tracker,
             $this->identityMap,
             new IdentifierResolver($types, new PropertyAccessor()),
+            new RelationInitializer(new PropertyAccessor()),
         );
         $this->metadata = (new AttributeMetadataFactory())->getMetadataFor(User::class);
     }

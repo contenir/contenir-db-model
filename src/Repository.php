@@ -9,12 +9,15 @@ use Contenir\Db\Model\Exception\IdentityConflictException;
 use Contenir\Db\Model\Exception\MappingException;
 use Contenir\Db\Model\Exception\PersistenceException;
 use Contenir\Db\Model\Exception\QueryException;
+use Contenir\Db\Model\Exception\RelationException;
 use Contenir\Db\Model\Exception\TypeConversionException;
 use Contenir\Db\Model\Metadata\EntityMetadata;
 use Contenir\Db\Model\Query\CriteriaTranslator;
 use Contenir\Db\Model\Query\EntityReader;
 use Generator;
 use PhpDb\Sql\Select;
+
+use function array_values;
 
 /**
  * Finders for one entity class. Every entity returned is managed by the
@@ -153,7 +156,7 @@ class Repository
      */
     public function findBy(array $criteria = [], array $orderBy = [], ?int $limit = null, ?int $offset = null): array
     {
-        $select = $this->query($criteria, $orderBy);
+        $select = $this->criteria->apply($this->metadata, $this->reader->select($this->metadata), $criteria, $orderBy);
         if (null !== $limit) {
             $select->limit($limit);
         }
@@ -179,7 +182,43 @@ class Repository
      */
     public function findOneBy(array $criteria, array $orderBy = []): ?object
     {
-        return $this->reader->one($this->metadata, $this->query($criteria, $orderBy));
+        return $this->reader->one(
+            $this->metadata,
+            $this->criteria->apply($this->metadata, $this->reader->select($this->metadata), $criteria, $orderBy),
+        );
+    }
+
+    /**
+     * Load the named relations for all $entities in one query per
+     * relation (and per level of a dotted path such as "orders.items"),
+     * avoiding a query per entity when iterating. Already loaded relations
+     * are replaced.
+     *
+     * @param iterable<object> $entities entities of this repository's class
+     *
+     * @throws HydrationException
+     * @throws IdentityConflictException
+     * @throws MappingException          When a path names an undeclared relation.
+     * @throws PersistenceException
+     * @throws RelationException         When an entity is of another class, or a required relation has no row.
+     * @throws TypeConversionException
+     */
+    public function preload(iterable $entities, string ...$paths): void
+    {
+        $list = [];
+        foreach ($entities as $entity) {
+            if (! $entity instanceof $this->metadata->className) {
+                throw RelationException::unexpectedEntity($this->metadata->className, $entity::class);
+            }
+
+            $list[] = $entity;
+        }
+
+        if ([] === $list || [] === $paths) {
+            return;
+        }
+
+        $this->em->queryContext()->preloader->preload($this->metadata, $list, array_values($paths));
     }
 
     /**
@@ -200,29 +239,9 @@ class Repository
      */
     public function stream(array $criteria = [], array $orderBy = []): Generator
     {
-        return $this->reader->stream($this->metadata, $this->query($criteria, $orderBy));
-    }
-
-    /**
-     * @param array<string, mixed>  $criteria
-     * @param array<string, string> $orderBy
-     *
-     * @throws QueryException
-     * @throws TypeConversionException
-     */
-    private function query(array $criteria, array $orderBy): Select
-    {
-        $select = $this->reader->select($this->metadata);
-        $where  = $this->criteria->where($this->metadata, $criteria);
-        if ([] !== $where) {
-            $select->where($where);
-        }
-
-        $order = $this->criteria->order($this->metadata, $orderBy);
-        if ([] !== $order) {
-            $select->order($order);
-        }
-
-        return $select;
+        return $this->reader->stream(
+            $this->metadata,
+            $this->criteria->apply($this->metadata, $this->reader->select($this->metadata), $criteria, $orderBy),
+        );
     }
 }

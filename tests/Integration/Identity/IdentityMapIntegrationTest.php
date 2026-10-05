@@ -6,10 +6,12 @@ namespace ContenirTest\Db\Model\Integration\Identity;
 
 use Contenir\Db\Model\Hydrator\ChangeTracker;
 use Contenir\Db\Model\Hydrator\EntityHydrator;
+use Contenir\Db\Model\Hydrator\PropertyAccessor;
 use Contenir\Db\Model\Identity\EntityLoader;
 use Contenir\Db\Model\Identity\IdentifierResolver;
 use Contenir\Db\Model\Identity\IdentityMap;
 use Contenir\Db\Model\Metadata\AttributeMetadataFactory;
+use Contenir\Db\Model\Relation\RelationInitializer;
 use Contenir\Db\Model\Type\TypeRegistry;
 use ContenirTest\Db\Model\TestAsset\Entity\Order;
 use ContenirTest\Db\Model\Trait\SqliteAdapterTrait;
@@ -35,6 +37,7 @@ final class IdentityMapIntegrationTest extends TestCase
             new ChangeTracker($hydrator),
             new IdentityMap(),
             new IdentifierResolver($types),
+            new RelationInitializer(new PropertyAccessor()),
         );
         $metadata = (new AttributeMetadataFactory())->getMetadataFor(Order::class);
         $sql      = new Sql($this->adapter, 'orders');
