@@ -22,6 +22,7 @@ $types = TypeRegistry::withDefaults();
 | `datetime` | any `DateTimeInterface` property | a `Y-m-d H:i:s` string, falling back to PHP's general parser (so fractional seconds and offsets work). A `DateTimeInterface` from the driver is accepted too. | a `Y-m-d H:i:s` string |
 | `date` | `#[Column(type: 'date')]` | a `Y-m-d` string with the time set to `00:00:00` | a `Y-m-d` string |
 | `json` | `#[Column(type: 'json')]` | JSON text decoded with objects as associative arrays | JSON text, with slashes and Unicode unescaped and `1.0` kept as `1.0` |
+| `SensitiveString` | any `SensitiveString` property (registered by class name) | `SensitiveString` wrapping the text | the revealed `string`; see [sensitive data](sensitive-data.md) |
 | `enum` | any `BackedEnum` property | the case whose backing value matches. Values are compared as strings, so `'2'` matches an int-backed case `2`. | the case's backing value |
 
 `datetime` returns `DateTimeImmutable`, unless the property is declared as

@@ -19,6 +19,7 @@ use Contenir\Db\Model\Metadata\ColumnMappingReader;
 use Contenir\Db\Model\Metadata\FieldMetadata;
 use Contenir\Db\Model\Metadata\FieldRole;
 use Contenir\Db\Model\Metadata\FieldType;
+use Contenir\Db\Model\Metadata\FieldTypeResolver;
 use Contenir\Db\Model\Metadata\JoinTable;
 use Contenir\Db\Model\Metadata\MappingValidator;
 use Contenir\Db\Model\Metadata\PropertyFieldReader;
@@ -28,6 +29,7 @@ use Contenir\Db\Model\Metadata\RelationKeys;
 use Contenir\Db\Model\Metadata\RelationKind;
 use Contenir\Db\Model\Metadata\RelationMetadata;
 use Contenir\Db\Model\Metadata\RelationMetadataBuilder;
+use ContenirTest\Db\Model\TestAsset\Entity\Account;
 use ContenirTest\Db\Model\TestAsset\Entity\Membership;
 use ContenirTest\Db\Model\TestAsset\Entity\Order;
 use ContenirTest\Db\Model\TestAsset\Entity\OrderStatus;
@@ -46,6 +48,7 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(ColumnMappingReader::class)]
 #[CoversClass(ColumnMapping::class)]
 #[CoversClass(PropertyFieldReader::class)]
+#[CoversClass(FieldTypeResolver::class)]
 #[CoversClass(MappingValidator::class)]
 #[CoversClass(RelationMetadataBuilder::class)]
 #[CoversClass(RelationContext::class)]
@@ -116,6 +119,21 @@ final class AttributeMetadataFactoryTest extends TestCase
                 ),
             ],
             ['email' => $metadata->getField('email'), 'createdAt' => $metadata->getField('createdAt')],
+        );
+    }
+
+    #[Test]
+    public function flagsSensitiveColumnsExplicitlyAndBySensitiveStringType(): void
+    {
+        $metadata = $this->factory->getMetadataFor(Account::class);
+
+        static::assertSame(
+            ['passwordHash' => true, 'apiToken' => true, 'username' => false],
+            [
+                'passwordHash' => $metadata->getField('passwordHash')->type->sensitive,
+                'apiToken'     => $metadata->getField('apiToken')->type->sensitive,
+                'username'     => $metadata->getField('username')->type->sensitive,
+            ],
         );
     }
 

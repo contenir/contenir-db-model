@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Contenir\Db\Model\Exception;
 
 use Contenir\Db\Model\Metadata\FieldMetadata;
+use Contenir\Db\Model\Value\SensitiveString;
+use SensitiveParameter;
 
 use function get_debug_type;
 use function is_scalar;
@@ -19,11 +21,19 @@ use function var_export;
  */
 final class TypeConversionException extends RuntimeException
 {
-    public static function invalidValue(FieldMetadata $field, mixed $value, string $expected): self
-    {
+    /**
+     * The offending value is described in the message unless the field is
+     * sensitive, in which case it is replaced with a redaction marker.
+     */
+    public static function invalidValue(
+        FieldMetadata $field,
+        #[SensitiveParameter]
+        mixed $value,
+        string $expected,
+    ): self {
         return new self(sprintf(
             'Cannot convert %s for property $%s (column "%s") to %s',
-            self::describe($value),
+            $field->type->sensitive ? SensitiveString::REDACTED . ' value' : self::describe($value),
             $field->propertyName,
             $field->columnName,
             $expected,
