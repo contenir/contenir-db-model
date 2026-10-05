@@ -1,311 +1,154 @@
 # contenir-db-model
 
-A small Laminas-flavoured data-mapper layer that pairs immutable-ish entities
-with table-backed repositories. Built on top of `laminas-db`,
-`laminas-hydrator` and `laminas-mvc`, it provides:
+A small data mapper for [php-db/phpdb](https://github.com/php-db/phpdb).
+Entities are plain PHP classes with typed properties, described by
+attributes. There are no base classes and no magic `__get`/`__set`.
 
-- A `Contenir\Db\Model\Entity\AbstractEntity` base class with column metadata,
-  modification tracking, lazy relation loading via `laminas-eventmanager`, and
-  array hydration.
-- A `Contenir\Db\Model\Repository\AbstractRepository` table-gateway base class
-  that wraps `laminas-db` `Sql` operations (`insert`, `update`, `delete`,
-  `select`, `find`, `findByField`, `findOne`) and an opinionated `save()`
-  helper that auto-detects insert vs. update from the entity's primary keys.
-- A `Contenir\Db\Model\Hydrator\RelationsHydrator` that can hydrate single or
-  many-related entities, optionally through an intermediate join table.
-- Service-manager wiring (`ConfigProvider`, `Module`) so the package is usable
-  out of the box from a `laminas-mvc` or Mezzio application.
+- **Attribute mapping.** Tables, columns, keys, versions and relations are
+  declared on the class and validated up front.
+- **Typed values.** Enums, dates, JSON, booleans and secrets are converted
+  in both directions.
+- **An entity manager** with an identity map, changed-column updates,
+  optimistic locking and re-entrant transactions.
+- **Repositories** with validated criteria, streaming and custom phpdb
+  selects.
+- **Lazy relations,** plus `preload()` to avoid N+1 queries.
+
+> **Status: 2.0 pre-release.** 2.0 is a rewrite and is not compatible with
+> 1.x. See [UPGRADE-2.0.md](UPGRADE-2.0.md). 1.x remains available from the
+> `v1.0.*` tags.
 
 ## Requirements
 
-- PHP `^8.1`
-- `laminas/laminas-db` `^2.20`
-- `laminas/laminas-hydrator` `^4.15`
-- `laminas/laminas-mvc` `^3.0`
-- `contenir/contenir-metadata` `^1.0`
+- PHP 8.3, 8.4 or 8.5
+- `php-db/phpdb` 0.6, plus the platform package for your database, such as
+  `php-db/phpdb-mysql` or `php-db/phpdb-sqlite`
+- `psr/container`, `psr/simple-cache`
 
 ## Installation
 
 ```bash
-composer require contenir/contenir-db-model
+composer require contenir/contenir-db-model:^2.0@RC
 ```
 
-If you use the Laminas component installer the package will register itself
-automatically. Otherwise add the module to your application config:
+The latest development version is `v2.x-dev`. Until `php-db/phpdb` 0.6.0
+and this package's 2.0.0 are tagged, the consuming project needs `"minimum-stability": "dev"` and
+`"prefer-stable": true`.
+
+With `laminas/laminas-component-installer`, the `ConfigProvider` (Mezzio)
+or `Module` (laminas-mvc) is registered automatically. See
+[container integration](docs/container.md) for configuration.
+
+## At a glance
 
 ```php
-// config/modules.config.php
-return [
-    // ...
-    'Contenir\\Db\\Model',
-];
-```
+use Contenir\Db\Model\Collection;
+use Contenir\Db\Model\EntityManager;
+use Contenir\Db\Model\Mapping\{Column, HasMany, Id, Table, Version};
 
-The component exposes a configured database adapter alias under the
-`model.adapter` config key (defaulting to `Laminas\Db\Adapter\Adapter`).
-Override this in your application config if you use a custom adapter service.
-
-```php
-// config/autoload/db.global.php
-return [
-    'model' => [
-        'adapter' => 'My\\Custom\\Adapter',
-        'map'     => [
-            // Optional repository → entity mapping. Used by RepositoryFactory.
-            App\Model\Repository\UserRepository::class => App\Model\Entity\UserEntity::class,
-        ],
-    ],
-];
-```
-
-## Usage
-
-### 1. Define an entity
-
-Subclass `AbstractEntity` and declare column metadata. `primaryKeys`,
-`columns`, and `relations` are the three properties the base class reads.
-
-```php
-use Contenir\Db\Model\Entity\AbstractEntity;
-
-class UserEntity extends AbstractEntity
+#[Table('users')]
+final class User
 {
-    protected array $primaryKeys = ['id'];
+    #[Id(generated: true)]
+    public ?int $id = null;
 
-    protected array $columns = [
-        'id',
-        'email',
-        'name',
-        'created_at',
-    ];
+    #[Column]
+    public string $email;
 
-    protected array $relations = [
-        'orders' => [
-            'type'   => AbstractEntity::RELATION_MANY,
-            'column' => 'id',
-            'table'  => [
-                'class'  => OrderRepository::class,
-                'column' => 'user_id',
-            ],
-            'order'  => ['created_at DESC'],
-        ],
-    ];
+    #[Column('created_at')]
+    public DateTimeImmutable $createdAt;
+
+    #[Version]
+    public int $version = 1;
+
+    /** @var Collection<Order> */
+    #[HasMany(Order::class, foreignKey: 'user_id')]
+    public Collection $orders;
+}
+
+$em    = new EntityManager($adapter);
+$users = $em->getRepository(User::class);
+
+$user        = $users->find(1);
+$user->email = 'new@example.com';
+$em->save($user);   // UPDATE users SET email = ?, version = 2 WHERE id = 1 AND version = 1
+
+foreach ($user->orders as $order) {
+    // loaded lazily, in one query
 }
 ```
 
-Entities support array-style construction, isset/unset, modification tracking
-and PHP serialisation:
+## Documentation
 
-```php
-$user        = new UserEntity(['id' => 1, 'email' => 'a@example.com']);
-$user->name  = 'Alice';
+Read in this order:
 
-// Constructor populates via __set, so every supplied column is flagged
-// modified — this is what tells save(MODE_INSERT) which columns to
-// write. Repositories call markClean() (or synch()) after a successful
-// load/save, so entities returned from find()/findOne() report only the
-// caller's subsequent changes:
-//   $user->getModifiedArrayCopy();
-//   // => ['id' => 1, 'email' => 'a@example.com', 'name' => 'Alice']
+1. [Mapping entities](docs/mapping.md): attributes, keys, validation rules
+2. [Type conversion](docs/types.md): built-in and custom converters, nulls
+3. [Persisting entities](docs/persistence.md): `EntityManager` saves,
+   deletes, locking and transactions
+4. [Repositories and finders](docs/repositories.md): criteria, streaming,
+   custom queries and repositories
+5. [Relations](docs/relations.md): lazy collections, `LazyRelationsTrait`,
+   `preload()`
+6. [Identity map](docs/identity-map.md): one object per row, and memory in
+   long-running processes
+7. [Entity lifecycle](docs/entity-lifecycle.md): hydration, refresh and
+   change tracking in detail
+8. [Sensitive data](docs/sensitive-data.md): `SensitiveString` and
+   redaction
+9. [Metadata caching](docs/metadata-caching.md): PSR-16 cache for
+   production
+10. [Container integration](docs/container.md): configuration, factories,
+    entity manager lifetime
 
-$user->getArrayCopy();   // full row, including null columns
-$user->getPrimaryKeys(); // ['id' => 1] — auto-increment PKs come back as null until saved
-```
+Upgrading from 1.x: [UPGRADE-2.0.md](UPGRADE-2.0.md). Changes:
+[CHANGELOG.md](CHANGELOG.md).
 
-### 2. Define a repository
+Console tools for generating entities from tables, upgrading 1.x
+entities and validating mappings against the schema are in
+[contenir-db-model-tools](https://github.com/contenir/contenir-db-model-tools).
 
-Subclass `BaseRepository` (or `AbstractRepository` for full control) and set
-the table name. The factory wires the adapter, entity prototype and lookup
-service for you.
-
-```php
-use Contenir\Db\Model\Repository\BaseRepository;
-use Laminas\Db\Sql\TableIdentifier;
-
-class UserRepository extends BaseRepository
-{
-    protected TableIdentifier|string|array|null $table = 'users';
-}
-```
-
-Register the repository with `RepositoryFactory`:
-
-```php
-// config/autoload/dependencies.global.php
-use Contenir\Db\Model\Repository\Factory\RepositoryFactory;
-
-return [
-    'dependencies' => [
-        'factories' => [
-            App\Model\Repository\UserRepository::class => RepositoryFactory::class,
-        ],
-    ],
-];
-```
-
-By default `RepositoryFactory` resolves the entity by anchoring the
-convention to the trailing class name and the `\Repository\` namespace
-segment, so `App\Model\Repository\UserRepository` resolves to
-`App\Model\Entity\UserEntity`. Unrelated occurrences of "Repository"
-elsewhere in the namespace are left alone. Override the convention with
-the `model.map` config when your naming differs.
-
-### 3. Query and persist
-
-```php
-/** @var UserRepository $users */
-$users = $container->get(UserRepository::class);
-
-$user = $users->findOne(['email' => 'a@example.com']);
-
-$user->name = 'Updated';
-$users->save($user); // detects update vs insert from primary keys
-
-$new = $users->create(['email' => 'b@example.com', 'name' => 'Bob']);
-$users->save($new);  // mode auto → insert; primary key is back-filled
-
-$users->delete(['id' => 42]);
-```
-
-`findByField($column, $value)` validates `$column` against the
-declared columns of the entity prototype and rejects unknown values, so
-caller-controlled column names cannot smuggle SQL into the predicate's
-left-hand side.
-
-`$order` arguments to `find`, `findByField`, and `prepareSelect` are
-passed straight to `Laminas\Db\Sql\Select::order()`, which quotes
-identifiers. Pass either a string (`'name ASC'`), a list
-(`['name', 'created_at DESC']`), or an associative array
-(`['name' => 'ASC']`). For raw SQL fragments, pass a
-`Laminas\Db\Sql\Expression` instance explicitly.
-
-`save()` accepts an explicit mode if you need to override the detection:
-
-```php
-use Contenir\Db\Model\Repository\AbstractRepository;
-
-$users->save($user, AbstractRepository::MODE_INSERT);
-$users->save($user, AbstractRepository::MODE_UPDATE);
-```
-
-By default `save()` issues a single statement and applies the
-auto-generated PK locally — no post-write SELECT. Pass `refresh: true`
-when the entity needs to pick up DB-computed defaults, triggers or
-concurrent writes; the INSERT/UPDATE and refresh SELECT are then
-wrapped in a transaction:
-
-```php
-$users->save($user, refresh: true);
-```
-
-For long-running scripts or when several statements need to be atomic,
-wrap them with `transactional()`. Calls are re-entrant — nested
-`transactional()` invocations join the outer transaction, and only the
-outermost frame commits or rolls back:
-
-```php
-$users->transactional(function () use ($users, $orders, $user, $order) {
-    $users->save($user);
-    $orders->save($order);
-});
-```
-
-### Optimistic locking
-
-Declare a `versionColumn` on an entity to opt into optimistic
-concurrency control:
-
-```php
-class WidgetEntity extends AbstractEntity
-{
-    protected array $columns       = ['id', 'name', 'version'];
-    protected ?string $versionColumn = 'version';
-}
-```
-
-`save()` then issues `UPDATE … WHERE pk = ? AND version = :loaded`,
-bumps the version through `nextVersion()`, and throws
-`Contenir\Db\Model\Exception\StaleEntityException` when the row no
-longer matches its loaded version (concurrently updated or deleted).
-Override `AbstractEntity::nextVersion()` for non-integer schemes
-(e.g. `microtime`-based timestamps).
-
-### 4. Lazy-loaded relations
-
-Relations declared on the entity are fetched on first access. Internally the
-entity emits a `loadRelation` event; `RelationsHydrator` attaches a listener
-that pulls the related rows from the configured repository.
-
-```php
-$user->orders; // triggers a SELECT on the orders repository
-```
-
-The hydrator caches identical FK lookups within its own lifetime, so
-iterating a result set in which many parent rows share the same FK target
-(e.g. fifty orders that all belong to one user) only issues one query per
-distinct target rather than one per row.
-
-To avoid the classic N+1 pattern when each parent has a different FK,
-batch-load the relations up front with `preloadRelations()`:
-
-```php
-$users = iterator_to_array($users->find());
-$users->preloadRelations($users, ['orders', 'profile']);
-
-foreach ($users as $user) {
-    foreach ($user->orders as $order) {
-        // already in memory, no query issued
-    }
-}
-```
-
-`preloadRelations()` issues one SELECT per relation with a `WHERE … IN (…)`
-clause over the parent foreign-key values and assigns the matching rows
-back onto each entity. It currently supports single-column relations
-without `via` join tables; for relations with `via` tables (many-to-many)
-fall back to the lazy-load path.
-
-For many-to-many relationships, declare a `via` table:
-
-```php
-'tags' => [
-    'type'   => AbstractEntity::RELATION_MANY,
-    'column' => 'id',
-    'table'  => [
-        'class'  => TagRepository::class,
-        'column' => 'id',
-    ],
-    'via' => [
-        'table'  => 'user_tag',
-        'column' => 'user_id', // column on the join table matching the owning row's key
-        'join'   => 'tag_id',  // column on the join table matching the related table's key
-    ],
-],
-```
-
-## Exceptions
-
-All exceptions thrown by the package implement
-`Contenir\Db\Model\Exception\ExceptionInterface`. Concrete classes extend the
-matching SPL exception:
-
-- `Contenir\Db\Model\Exception\InvalidArgumentException`
-- `Contenir\Db\Model\Exception\RuntimeException`
+[`llms.txt`](llms.txt) indexes these pages and lists the key rules for LLM
+tooling.
 
 ## Development
 
+Mago is required. It is a standalone binary, installed with `brew install
+mago` or see the [Mago docs](https://mago.carthage.software/).
+
 ```bash
 composer install
-composer test            # run the unit and integration tests
-composer cs-check        # check coding standards
-composer cs-fix          # apply coding standards fixes
-composer test-coverage   # generate clover.xml coverage report (needs xdebug or pcov)
+composer check                    # format check, lint, static analysis, unit + integration tests
+composer cs-fix                   # apply formatting and safe lint fixes
+composer test                     # unit suite (tests/Unit)
+composer test-integration         # integration suite against in-memory SQLite (tests/Integration)
+composer test-coverage            # line coverage to clover.xml (Xdebug or PCOV)
+composer test-coverage-branches   # line + branch coverage across both suites (Xdebug)
 ```
 
-The integration tests live under `test/Integration/` and use an in-memory
-SQLite database (via `pdo_sqlite`) so they run without external setup. Unit
-tests live alongside the corresponding `src` directory under `test/`.
+The integration suite runs against in-memory SQLite by default. To run it
+against MySQL or PostgreSQL, set `DB_PLATFORM` (and `DB_HOST`, `DB_PORT`,
+`DB_NAME`, `DB_USER`, `DB_PASSWORD` as needed). `compose.yml` starts both
+databases:
+
+```bash
+docker compose up -d
+DB_PLATFORM=mysql DB_PORT=33306 DB_PASSWORD=secret composer test-integration
+DB_PLATFORM=pgsql DB_PORT=55432 DB_USER=postgres DB_PASSWORD=secret composer test-integration
+```
+
+Every test recreates the fixture schema, including a `crm` schema or
+database, so use a disposable database and a user allowed to create it.
+CI runs the suite on SQLite, MySQL 8.4 and PostgreSQL 17.
+
+`test-coverage-branches` runs each test directory in its own process and
+merges the results, because Xdebug 3.4's `--path-coverage` intermittently
+crashes on long runs. Pass `-- --clover clover.xml` or
+`-- --html build/coverage` for report files.
+
+QA configuration comes from
+[php-db/phpdb-qa-tools](https://github.com/php-db/phpdb-qa-tools).
 
 ## License
 
-Released under the [BSD-3-Clause](LICENSE) license.
+BSD-3-Clause. See [LICENSE.md](LICENSE.md).
