@@ -60,7 +60,8 @@ final class User
 | [Entity lifecycle](docs/entity-lifecycle.md): hydration, refresh, change tracking, writing entity classes | Available |
 | [Sensitive data](docs/sensitive-data.md): `SensitiveString` and `#[Column(sensitive: true)]` | Available |
 | [Identity map](docs/identity-map.md): one object per row, matching rules, memory in long-running processes | Available |
-| Repositories and the entity manager | Planned |
+| [Persisting entities](docs/persistence.md): `EntityManager` save, delete, refresh, optimistic locking, transactions | Available |
+| Repositories and finders | Planned |
 | Relation loading and `preload()` | Planned |
 | Upgrading from 1.x | Planned |
 

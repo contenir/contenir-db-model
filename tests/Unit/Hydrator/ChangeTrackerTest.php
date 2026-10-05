@@ -120,6 +120,31 @@ final class ChangeTrackerTest extends TestCase
     }
 
     #[Test]
+    public function restorePutsBackAPreviousSnapshot(): void
+    {
+        $order = self::order();
+        $this->tracker->snapshot($this->metadata, $order);
+        $before       = $this->tracker->snapshotOf($order);
+        $order->total = 250;
+        $this->tracker->snapshot($this->metadata, $order);
+
+        $this->tracker->restore($order, $before);
+
+        static::assertSame(['total' => 250], $this->tracker->changes($this->metadata, $order));
+    }
+
+    #[Test]
+    public function restoringNullStopsTracking(): void
+    {
+        $order = self::order();
+        $this->tracker->snapshot($this->metadata, $order);
+
+        $this->tracker->restore($order, null);
+
+        static::assertFalse($this->tracker->isTracked($order));
+    }
+
+    #[Test]
     public function snapshottedEntityWithoutEditsHasNoChanges(): void
     {
         $order = self::order();
