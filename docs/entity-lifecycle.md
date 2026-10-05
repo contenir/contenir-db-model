@@ -29,6 +29,12 @@ are internal; repositories and the entity manager drive them for you.
 A database `NULL` for a non-nullable property throws
 `TypeConversionException`. Declare columns that can be NULL as `?type`.
 
+## Already-loaded rows
+
+Before a row is hydrated, the [identity map](identity-map.md) is checked.
+If the entity for that primary key is already in memory, that object is
+returned as-is, and the steps above are skipped.
+
 ## Refreshing an already-loaded entity
 
 Refreshing (for example, `save()` with refresh, or an explicit reload)

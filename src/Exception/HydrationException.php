@@ -6,6 +6,7 @@ namespace Contenir\Db\Model\Exception;
 
 use Throwable;
 
+use function implode;
 use function sprintf;
 
 /**
@@ -32,6 +33,19 @@ final class HydrationException extends RuntimeException
             0,
             $previous,
         );
+    }
+
+    /**
+     * @param list<string> $columns
+     */
+    public static function missingIdentifier(string $className, array $columns): self
+    {
+        return new self(sprintf(
+            'Cannot load entity "%s": the row lacks a non-null value for identifier column(s) [%s]; '
+                . 'include the primary key in the select',
+            $className,
+            implode(', ', $columns),
+        ));
     }
 
     public static function readonlyChanged(string $className, string $property): self
