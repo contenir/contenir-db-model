@@ -26,6 +26,18 @@ final readonly class RowFetcher
     }
 
     /**
+     * @param iterable<int, array<string, mixed>> $result
+     *
+     * @return Generator<int, array<string, mixed>>
+     */
+    private static function iterate(iterable $result): Generator
+    {
+        foreach ($result as $row) {
+            yield $row;
+        }
+    }
+
+    /**
      * @template T of object
      *
      * @param EntityMetadata<T>                         $metadata
@@ -41,9 +53,11 @@ final readonly class RowFetcher
     }
 
     /**
+     * Execute $select immediately and return its rows lazily.
+     *
      * @return Generator<int, array<string, mixed>>
      *
-     * @throws PersistenceException
+     * @throws PersistenceException When the driver returns no result.
      */
     public function rows(Select $select): Generator
     {
@@ -53,7 +67,7 @@ final readonly class RowFetcher
             throw PersistenceException::noResult();
         }
 
-        yield from $result;
+        return self::iterate($result);
     }
 
     /**

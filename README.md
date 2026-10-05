@@ -28,6 +28,7 @@ While phpdb 0.6 is untagged, the consuming project needs
 ## At a glance
 
 ```php
+use Contenir\Db\Model\EntityManager;
 use Contenir\Db\Model\Mapping\{Column, HasMany, Id, Table, Version};
 
 #[Table('users')]
@@ -48,6 +49,13 @@ final class User
     #[HasMany(Order::class, foreignKey: 'user_id')]
     public iterable $orders;
 }
+
+$em    = new EntityManager($adapter);
+$users = $em->getRepository(User::class);
+
+$user        = $users->find(1);
+$user->email = 'new@example.com';
+$em->save($user);   // UPDATE users SET email = ?, version = 2 WHERE id = 1 AND version = 1
 ```
 
 ## Documentation
@@ -61,7 +69,7 @@ final class User
 | [Sensitive data](docs/sensitive-data.md): `SensitiveString` and `#[Column(sensitive: true)]` | Available |
 | [Identity map](docs/identity-map.md): one object per row, matching rules, memory in long-running processes | Available |
 | [Persisting entities](docs/persistence.md): `EntityManager` save, delete, refresh, optimistic locking, transactions | Available |
-| Repositories and finders | Planned |
+| [Repositories and finders](docs/repositories.md): `find`, criteria, ordering, streaming, custom queries and repositories | Available |
 | Relation loading and `preload()` | Planned |
 | Upgrading from 1.x | Planned |
 

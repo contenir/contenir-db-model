@@ -16,6 +16,7 @@ Key facts for code generation:
 - Secrets (password hashes, tokens): type the property as `Contenir\Db\Model\Value\SensitiveString`. It's stored as text, redacted in var_dump/print_r, and read with `->reveal()`; it has no __toString. `#[Column(sensitive: true)]` only redacts the library's own messages. `#[\SensitiveParameter]` does not work on properties.
 - Identity map: one object per (class, primary key) per entity manager. Every select that loads entities must include the primary-key columns, or `HydrationException` is thrown. A re-loaded row returns the existing object unchanged (in-memory edits win). Long-running workers must call `clear()` between jobs.
 - Writes: `$em = new EntityManager($adapter)`. `$em->save($e)` inserts unmanaged entities and updates managed ones (changed columns only; nothing changed means no SQL). Also `saveAndRefresh`, `delete`, `refresh`, `transactional(fn)`, `contains`, `clear`. There is no flush step: every call writes immediately.
+- Reads: `$em->getRepository(User::class)` gives `find($id)` (scalar, or `['prop' => v]` for composite keys; no query if already loaded), `findOneBy`, `findBy($criteria, $orderBy, $limit, $offset)`, `count`, `stream`, `createSelect()` plus `fetch(Select)`/`fetchOne`. Criteria and ordering use PROPERTY names; values may be enum cases or backing values, DateTimes, lists (IN) or null (IS NULL). Raw `Select` conditions use COLUMN names. Custom repositories extend `Repository` and call `parent::__construct($em, Entity::class)`.
 - `#[Version]` guards updates and deletes. A concurrent change throws `StaleEntityException`. A rolled-back `transactional()` restores entity tracking, so retries work.
 - Saves write only the columns that changed since load. Changes are compared in database form, so an equal DateTime or the same enum case is not a change.
 
@@ -25,6 +26,7 @@ Key facts for code generation:
 - [Metadata caching](docs/metadata-caching.md): CachedMetadataFactory, cache keys, failure behaviour, invalidation
 - [Type conversion](docs/types.md): built-in converters and their accepted inputs, resolution order, nulls, custom converters
 - [Sensitive data](docs/sensitive-data.md): SensitiveString value object, the sensitive column flag, and their limits
+- [Repositories and finders](docs/repositories.md): finder methods, criteria rules, streaming, custom selects, custom repository subclasses
 - [Persisting entities](docs/persistence.md): EntityManager API, insert/update rules, optimistic locking, transactions and rollback behaviour
 - [Identity map](docs/identity-map.md): instance sharing, key normalisation, required primary-key columns, clearing in workers
 - [Entity lifecycle](docs/entity-lifecycle.md): how rows become entities, refresh rules for readonly properties, snapshot-based change tracking
@@ -36,10 +38,12 @@ Key facts for code generation:
 - [Types](src/Type/): TypeRegistry, TypeConverterInterface and the built-in converters
 - [Values](src/Value/): SensitiveString
 - [Hydrator](src/Hydrator/): EntityHydrator, ChangeTracker, PropertyAccessor (internal)
-- [EntityManager](src/EntityManager.php): the public write API
+- [EntityManager](src/EntityManager.php): the public write API and `getRepository()`
+- [Repository](src/Repository.php): the public read API, extendable
+- [Query](src/Query/): CriteriaTranslator, EntityReader (internal)
 - [Persistence](src/Persistence/): persister, remover, refresher, transactions, rollback journal (internal)
 - [Identity](src/Identity/): IdentityMap, IdentifierResolver, EntityLoader (internal)
-- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, TypeConversionException, HydrationException, IdentityConflictException, PersistenceException, StaleEntityException
+- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, TypeConversionException, HydrationException, IdentityConflictException, PersistenceException, QueryException, StaleEntityException
 
 ## Optional
 

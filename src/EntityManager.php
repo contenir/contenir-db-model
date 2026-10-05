@@ -10,8 +10,8 @@ use Contenir\Db\Model\Exception\MappingException;
 use Contenir\Db\Model\Exception\PersistenceException;
 use Contenir\Db\Model\Exception\StaleEntityException;
 use Contenir\Db\Model\Exception\TypeConversionException;
+use Contenir\Db\Model\Identity\EntityLoader;
 use Contenir\Db\Model\Metadata\AttributeMetadataFactory;
-use Contenir\Db\Model\Metadata\EntityMetadata;
 use Contenir\Db\Model\Metadata\MetadataFactoryInterface;
 use Contenir\Db\Model\Persistence\EntityPersister;
 use Contenir\Db\Model\Persistence\EntityRefresher;
@@ -21,6 +21,9 @@ use Contenir\Db\Model\Persistence\Session;
 use Contenir\Db\Model\Persistence\StatementRunner;
 use Contenir\Db\Model\Persistence\TransactionManager;
 use Contenir\Db\Model\Persistence\WriteJournal;
+use Contenir\Db\Model\Query\CriteriaTranslator;
+use Contenir\Db\Model\Query\EntityReader;
+use Contenir\Db\Model\Query\QueryContext;
 use Contenir\Db\Model\Type\TypeRegistry;
 use PhpDb\Adapter\AdapterInterface;
 use Throwable;
@@ -46,6 +49,13 @@ final class EntityManager
 
     private readonly TransactionManager $transactions;
 
+    private readonly QueryContext $queryContext;
+
+    /**
+     * @var array<class-string, Repository<object>>
+     */
+    private array $repositories = [];
+
     public function __construct(
         AdapterInterface $adapter,
         ?MetadataFactoryInterface $metadata = null,
@@ -58,8 +68,21 @@ final class EntityManager
         $statements         = new StatementRunner($adapter);
         $this->persister    = new EntityPersister($statements, $this->session, $types, $journal);
         $this->remover      = new EntityRemover($statements, $this->session, $journal);
-        $this->refresher    = new EntityRefresher(new RowFetcher($adapter), $this->session, $journal);
+        $rows               = new RowFetcher($adapter);
+        $this->refresher    = new EntityRefresher($rows, $this->session, $journal);
         $this->transactions = new TransactionManager($adapter, $journal);
+        $loader             = new EntityLoader(
+            $this->session->hydrator,
+            $this->session->tracker,
+            $this->session->identityMap,
+            $this->session->identifiers,
+        );
+        $this->queryContext = new QueryContext(
+            $this->metadata,
+            new EntityReader($rows, $loader),
+            new CriteriaTranslator($types),
+            $this->session->identityMap,
+        );
     }
 
     /**
@@ -92,7 +115,34 @@ final class EntityManager
      */
     public function delete(object $entity): void
     {
-        $this->remover->delete($this->metadataOf($entity), $entity);
+        $this->remover->delete($this->metadata->getMetadataFor($entity::class), $entity);
+    }
+
+    /**
+     * The generic repository for an entity class, created once per
+     * manager. Custom repository subclasses are constructed directly (or
+     * by a container factory) with this manager.
+     *
+     * @template T of object
+     *
+     * @param class-string<T> $className
+     *
+     * @return Repository<T>
+     *
+     * @throws MappingException
+     */
+    public function getRepository(string $className): Repository
+    {
+        /** @var Repository<T> */
+        return $this->repositories[$className] ??= new Repository($this, $className);
+    }
+
+    /**
+     * @internal Read-side collaborators shared with repositories.
+     */
+    public function queryContext(): QueryContext
+    {
+        return $this->queryContext;
     }
 
     /**
@@ -107,7 +157,7 @@ final class EntityManager
      */
     public function refresh(object $entity): void
     {
-        $this->refresher->refresh($this->metadataOf($entity), $entity);
+        $this->refresher->refresh($this->metadata->getMetadataFor($entity::class), $entity);
     }
 
     /**
@@ -123,7 +173,7 @@ final class EntityManager
      */
     public function save(object $entity): void
     {
-        $this->persister->save($this->metadataOf($entity), $entity);
+        $this->persister->save($this->metadata->getMetadataFor($entity::class), $entity);
     }
 
     /**
@@ -136,7 +186,7 @@ final class EntityManager
      */
     public function saveAndRefresh(object $entity): void
     {
-        $metadata = $this->metadataOf($entity);
+        $metadata = $this->metadata->getMetadataFor($entity::class);
 
         $this->transactions->transactional(
             /**
@@ -169,19 +219,5 @@ final class EntityManager
     public function transactional(callable $work): mixed
     {
         return $this->transactions->transactional($work);
-    }
-
-    /**
-     * @template T of object
-     *
-     * @param T $entity
-     *
-     * @return EntityMetadata<T>
-     *
-     * @throws MappingException
-     */
-    private function metadataOf(object $entity): EntityMetadata
-    {
-        return $this->metadata->getMetadataFor($entity::class);
     }
 }
