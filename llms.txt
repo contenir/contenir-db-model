@@ -17,6 +17,7 @@ Key facts for code generation:
 - Identity map: one object per (class, primary key) per entity manager. Every select that loads entities must include the primary-key columns, or `HydrationException` is thrown. A re-loaded row returns the existing object unchanged (in-memory edits win). Long-running workers must call `clear()` between jobs.
 - Writes: `$em = new EntityManager($adapter)`. `$em->save($e)` inserts unmanaged entities and updates managed ones (changed columns only; nothing changed means no SQL). Also `saveAndRefresh`, `delete`, `refresh`, `transactional(fn)`, `contains`, `clear`. There is no flush step: every call writes immediately.
 - Reads: `$em->getRepository(User::class)` gives `find($id)` (scalar, or `['prop' => v]` for composite keys; no query if already loaded), `findOneBy`, `findBy($criteria, $orderBy, $limit, $offset)`, `count`, `stream`, `createSelect()` plus `fetch(Select)`/`fetchOne`. Criteria and ordering use PROPERTY names; values may be enum cases or backing values, DateTimes, lists (IN) or null (IS NULL). Raw `Select` conditions use COLUMN names. Custom repositories extend `Repository` and call `parent::__construct($em, Entity::class)`.
+- Container: the `ConfigProvider` registers `EntityManager`, `MetadataFactoryInterface` and `TypeRegistry` factories. Config lives under `contenir_db_model`, with keys `adapter`, `metadata_cache`, `metadata_cache_ttl` and `types` (name or class => converter SERVICE). Custom repositories register with `Container\RepositoryFactory`. Long-running servers must `clear()` the shared EntityManager per request.
 - `#[Version]` guards updates and deletes. A concurrent change throws `StaleEntityException`. A rolled-back `transactional()` restores entity tracking, so retries work.
 - Saves write only the columns that changed since load. Changes are compared in database form, so an equal DateTime or the same enum case is not a change.
 
@@ -26,6 +27,7 @@ Key facts for code generation:
 - [Metadata caching](docs/metadata-caching.md): CachedMetadataFactory, cache keys, failure behaviour, invalidation
 - [Type conversion](docs/types.md): built-in converters and their accepted inputs, resolution order, nulls, custom converters
 - [Sensitive data](docs/sensitive-data.md): SensitiveString value object, the sensitive column flag, and their limits
+- [Container integration](docs/container.md): ConfigProvider, factories, configuration keys, custom repository registration, EntityManager lifetime
 - [Repositories and finders](docs/repositories.md): finder methods, criteria rules, streaming, custom selects, custom repository subclasses
 - [Persisting entities](docs/persistence.md): EntityManager API, insert/update rules, optimistic locking, transactions and rollback behaviour
 - [Identity map](docs/identity-map.md): instance sharing, key normalisation, required primary-key columns, clearing in workers
@@ -41,9 +43,10 @@ Key facts for code generation:
 - [EntityManager](src/EntityManager.php): the public write API and `getRepository()`
 - [Repository](src/Repository.php): the public read API, extendable
 - [Query](src/Query/): CriteriaTranslator, EntityReader (internal)
+- [Container](src/Container/): EntityManagerFactory, MetadataFactoryFactory, TypeRegistryFactory, RepositoryFactory
 - [Persistence](src/Persistence/): persister, remover, refresher, transactions, rollback journal (internal)
 - [Identity](src/Identity/): IdentityMap, IdentifierResolver, EntityLoader (internal)
-- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, TypeConversionException, HydrationException, IdentityConflictException, PersistenceException, QueryException, StaleEntityException
+- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, TypeConversionException, HydrationException, IdentityConflictException, PersistenceException, QueryException, ConfigurationException, StaleEntityException
 
 ## Optional
 

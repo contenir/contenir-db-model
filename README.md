@@ -25,6 +25,10 @@ composer require contenir/contenir-db-model:^2.0@dev
 While phpdb 0.6 is untagged, the consuming project needs
 `"minimum-stability": "dev"` and `"prefer-stable": true`.
 
+With `laminas/laminas-component-installer`, the `ConfigProvider` is
+registered automatically. See [container integration](docs/container.md)
+for configuration.
+
 ## At a glance
 
 ```php
@@ -70,6 +74,7 @@ $em->save($user);   // UPDATE users SET email = ?, version = 2 WHERE id = 1 AND 
 | [Identity map](docs/identity-map.md): one object per row, matching rules, memory in long-running processes | Available |
 | [Persisting entities](docs/persistence.md): `EntityManager` save, delete, refresh, optimistic locking, transactions | Available |
 | [Repositories and finders](docs/repositories.md): `find`, criteria, ordering, streaming, custom queries and repositories | Available |
+| [Container integration](docs/container.md): `ConfigProvider`, factories, configuration, entity manager lifetime | Available |
 | Relation loading and `preload()` | Planned |
 | Upgrading from 1.x | Planned |
 
