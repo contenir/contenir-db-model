@@ -23,6 +23,13 @@ phpdb 0.6.0 is tagged, your project needs `"minimum-stability": "dev"` and
 
 ## 1. Entities
 
+> **Automate this step.** [contenir-db-model-tools](https://github.com/contenir/contenir-db-model-tools)
+> converts 1.x entities in place: `vendor/bin/db-model entity:upgrade src/Entity --dsn …`.
+> It types each column from the live table, converts `$relations` to
+> attributes, keeps your methods, and lists anything it can't convert.
+> Afterwards, `mapping:validate` checks the result against the schema.
+> The rest of this section describes what it does, and what to do by hand.
+
 1.x entities extended `AbstractEntity` and listed their columns in arrays.
 Values lived in an internal `$data` array behind `__get`/`__set`.
 
@@ -348,8 +355,10 @@ There are new, more specific types: `MappingException`, `QueryException`,
 1. Require PHP 8.3+ and `php-db/phpdb` with your platform package. Move
    `Laminas\Db` imports to `PhpDb`.
 2. Convert each entity to attributes and typed properties, and check
-   nullability.
-3. Write a test that builds metadata for every entity.
+   nullability. `entity:upgrade` from contenir-db-model-tools does most of
+   this.
+3. Write a test that builds metadata for every entity, and run
+   `mapping:validate` against your database.
 4. Replace repository lookups with `$em->getRepository()` or custom
    `Repository` subclasses. Convert `find`/`findByField` calls to property-keyed
    criteria.
