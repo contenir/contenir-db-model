@@ -1,9 +1,9 @@
 # Container integration
 
-The package ships a `ConfigProvider` and PSR-11 factories, so it works with
-laminas-mvc, Mezzio, or any container that understands the `dependencies`
-config format. With `laminas/laminas-component-installer`, the provider is
-registered automatically on install.
+The package ships PSR-11 factories, a `ConfigProvider` for Mezzio-style
+config aggregation, and a `Module` class for laminas-mvc. With
+`laminas/laminas-component-installer`, the right one is registered
+automatically on install.
 
 Manual registration:
 
@@ -15,10 +15,16 @@ $aggregator = new ConfigAggregator([
     // ...
 ]);
 
-// laminas-mvc: config/modules.config.php has no module class; merge the
-// provider's output into your service_manager config instead:
-// (new \Contenir\Db\Model\ConfigProvider())->getDependencies()
+// laminas-mvc: config/modules.config.php
+return [
+    // ...
+    'Contenir\\Db\\Model',
+];
 ```
+
+The `Module` exposes the same services under laminas-mvc's
+`service_manager` key. Neither entry point requires laminas-mvc or
+laminas-servicemanager as a dependency.
 
 ## Services
 
