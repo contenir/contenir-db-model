@@ -14,6 +14,7 @@ Key facts for code generation:
 - A database NULL loaded into a non-nullable property throws `TypeConversionException`. Declare nullable columns as `?type`.
 - Entity constructors are NOT called when loading. Property defaults apply, and mapped properties may be private, protected or readonly (inherited ones too).
 - Secrets (password hashes, tokens): type the property as `Contenir\Db\Model\Value\SensitiveString`. It's stored as text, redacted in var_dump/print_r, and read with `->reveal()`; it has no __toString. `#[Column(sensitive: true)]` only redacts the library's own messages. `#[\SensitiveParameter]` does not work on properties.
+- Identity map: one object per (class, primary key) per entity manager. Every select that loads entities must include the primary-key columns, or `HydrationException` is thrown. A re-loaded row returns the existing object unchanged (in-memory edits win). Long-running workers must call `clear()` between jobs.
 - Saves write only the columns that changed since load. Changes are compared in database form, so an equal DateTime or the same enum case is not a change.
 
 ## Docs
@@ -22,6 +23,7 @@ Key facts for code generation:
 - [Metadata caching](docs/metadata-caching.md): CachedMetadataFactory, cache keys, failure behaviour, invalidation
 - [Type conversion](docs/types.md): built-in converters and their accepted inputs, resolution order, nulls, custom converters
 - [Sensitive data](docs/sensitive-data.md): SensitiveString value object, the sensitive column flag, and their limits
+- [Identity map](docs/identity-map.md): instance sharing, key normalisation, required primary-key columns, clearing in workers
 - [Entity lifecycle](docs/entity-lifecycle.md): how rows become entities, refresh rules for readonly properties, snapshot-based change tracking
 
 ## Source
@@ -31,7 +33,8 @@ Key facts for code generation:
 - [Types](src/Type/): TypeRegistry, TypeConverterInterface and the built-in converters
 - [Values](src/Value/): SensitiveString
 - [Hydrator](src/Hydrator/): EntityHydrator, ChangeTracker, PropertyAccessor (internal)
-- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, TypeConversionException, HydrationException, StaleEntityException
+- [Identity](src/Identity/): IdentityMap, IdentifierResolver, EntityLoader (internal)
+- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, TypeConversionException, HydrationException, IdentityConflictException, StaleEntityException
 
 ## Optional
 
