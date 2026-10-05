@@ -28,6 +28,10 @@
         </testsuite>
     </testsuites>
     <php>
+        <!-- Integration database: sqlite (in-memory), mysql or pgsql. Real environment variables win. -->
+        <env name="DB_PLATFORM" value="sqlite"/>
+        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_NAME" value="contenir_test"/>
         <ini name="date.timezone" value="UTC"/>
         <ini name="xdebug.max_nesting_level" value="3000"/>
     </php>

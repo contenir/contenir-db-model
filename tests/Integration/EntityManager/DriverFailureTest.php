@@ -19,6 +19,7 @@ use Contenir\Db\Model\Persistence\VersionLock;
 use Contenir\Db\Model\Persistence\WriteJournal;
 use ContenirTest\Db\Model\TestAsset\Db\NoGeneratedValueStatement;
 use ContenirTest\Db\Model\TestAsset\Db\NullResultStatement;
+use ContenirTest\Db\Model\TestAsset\Db\Platform;
 use ContenirTest\Db\Model\TestAsset\Db\Schema;
 use ContenirTest\Db\Model\TestAsset\Factory\EntityFactory;
 use ContenirTest\Db\Model\Trait\SqliteAdapterTrait;
@@ -48,7 +49,7 @@ final class DriverFailureTest extends TestCase
     #[Test]
     public function missingGeneratedValueIsReported(): void
     {
-        $this->setUpSqliteAdapterWithStatement(new NoGeneratedValueStatement(), ...Schema::ALL);
+        $this->setUpSqliteAdapterWithStatement(new NoGeneratedValueStatement(), ...Schema::create(Platform::Sqlite));
 
         $this->expectException(PersistenceException::class);
         $this->expectExceptionMessage('no generated value for ContenirTest\Db\Model\TestAsset\Entity\User::$id');
@@ -59,7 +60,7 @@ final class DriverFailureTest extends TestCase
     #[Test]
     public function missingSelectResultIsReported(): void
     {
-        $this->setUpSqliteAdapterWithStatement(new NullResultStatement(), ...Schema::ALL);
+        $this->setUpSqliteAdapterWithStatement(new NullResultStatement(), ...Schema::create(Platform::Sqlite));
         $tag     = EntityFactory::tag();
         $tag->id = 1;
 
@@ -72,7 +73,7 @@ final class DriverFailureTest extends TestCase
     #[Test]
     public function missingStatementResultIsReported(): void
     {
-        $this->setUpSqliteAdapterWithStatement(new NullResultStatement(), ...Schema::ALL);
+        $this->setUpSqliteAdapterWithStatement(new NullResultStatement(), ...Schema::create(Platform::Sqlite));
 
         $this->expectException(PersistenceException::class);
         $this->expectExceptionMessage('returned no result');

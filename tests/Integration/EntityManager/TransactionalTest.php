@@ -19,7 +19,7 @@ use Contenir\Db\Model\Persistence\VersionLock;
 use Contenir\Db\Model\Persistence\WriteJournal;
 use ContenirTest\Db\Model\TestAsset\Db\Schema;
 use ContenirTest\Db\Model\TestAsset\Factory\EntityFactory;
-use ContenirTest\Db\Model\Trait\SqliteAdapterTrait;
+use ContenirTest\Db\Model\Trait\TestDatabaseTrait;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
@@ -45,7 +45,7 @@ use function count;
 #[Group('integration')]
 final class TransactionalTest extends TestCase
 {
-    use SqliteAdapterTrait;
+    use TestDatabaseTrait;
 
     private EntityManager $em;
 
@@ -147,9 +147,12 @@ final class TransactionalTest extends TestCase
     #[Test]
     public function saveAndRefreshRollsBackWhenRefreshFails(): void
     {
-        $this->pdo->exec(
-            'CREATE TRIGGER users_vanish AFTER INSERT ON users BEGIN DELETE FROM users WHERE id = NEW.id; END',
-        );
+        $trigger = Schema::vanishingUserTrigger($this->platform);
+        if (null === $trigger) {
+            static::markTestSkipped("{$this->platform->value} triggers cannot delete from the table that fired them");
+        }
+
+        $this->execAll($trigger);
         $user = EntityFactory::user();
 
         try {
@@ -162,7 +165,7 @@ final class TransactionalTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->setUpSqliteAdapter(...Schema::ALL);
+        $this->setUpTestDatabase();
         $this->em = new EntityManager($this->adapter);
     }
 

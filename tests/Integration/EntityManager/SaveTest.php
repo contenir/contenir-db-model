@@ -21,7 +21,7 @@ use Contenir\Db\Model\Persistence\WriteJournal;
 use ContenirTest\Db\Model\TestAsset\Db\Schema;
 use ContenirTest\Db\Model\TestAsset\Entity\Note;
 use ContenirTest\Db\Model\TestAsset\Factory\EntityFactory;
-use ContenirTest\Db\Model\Trait\SqliteAdapterTrait;
+use ContenirTest\Db\Model\Trait\TestDatabaseTrait;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
@@ -46,7 +46,7 @@ use function str_contains;
 #[Group('integration')]
 final class SaveTest extends TestCase
 {
-    use SqliteAdapterTrait;
+    use TestDatabaseTrait;
 
     private EntityManager $em;
 
@@ -124,10 +124,7 @@ final class SaveTest extends TestCase
     #[Test]
     public function saveAndRefreshPicksUpDatabaseSideChanges(): void
     {
-        $this->pdo->exec(
-            'CREATE TRIGGER users_lower_email AFTER INSERT ON users BEGIN '
-                . 'UPDATE users SET email = lower(email) WHERE id = NEW.id; END',
-        );
+        $this->execAll(Schema::lowercaseEmailTrigger($this->platform));
         $user = EntityFactory::user('MiXeD@Example.COM');
 
         $this->em->saveAndRefresh($user);
@@ -237,7 +234,7 @@ final class SaveTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->setUpSqliteAdapter(...Schema::ALL);
+        $this->setUpTestDatabase();
         $this->em = new EntityManager($this->adapter);
     }
 }

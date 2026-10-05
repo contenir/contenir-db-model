@@ -12,3 +12,63 @@ jobs:
       php-versions: '["8.3", "8.4", "8.5"]'
       run-integration: true
       coverage-php-version: "8.4"
+
+  integration-databases:
+    name: "Integration (${{ matrix.db }} | PHP ${{ matrix.php }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.3", "8.5"]
+        db: ["mysql", "pgsql"]
+        include:
+          - db: "mysql"
+            port: 3306
+            user: "root"
+          - db: "pgsql"
+            port: 5432
+            user: "postgres"
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: secret
+          MYSQL_DATABASE: contenir_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -psecret"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: secret
+          POSTGRES_DB: contenir_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      DB_PLATFORM: ${{ matrix.db }}
+      DB_HOST: 127.0.0.1
+      DB_PORT: ${{ matrix.port }}
+      DB_NAME: contenir_test
+      DB_USER: ${{ matrix.user }}
+      DB_PASSWORD: secret
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, pdo_pgsql
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: Integration tests
+        run: composer test-integration

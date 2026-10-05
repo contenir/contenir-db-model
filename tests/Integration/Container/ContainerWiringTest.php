@@ -13,11 +13,10 @@ use Contenir\Db\Model\Metadata\MetadataFactoryInterface;
 use Contenir\Db\Model\Repository;
 use Contenir\Db\Model\Type\TypeRegistry;
 use ContenirTest\Db\Model\TestAsset\Container\InMemoryContainer;
-use ContenirTest\Db\Model\TestAsset\Db\Schema;
 use ContenirTest\Db\Model\TestAsset\Entity\User;
 use ContenirTest\Db\Model\TestAsset\Factory\EntityFactory;
 use ContenirTest\Db\Model\TestAsset\Repository\UserRepository;
-use ContenirTest\Db\Model\Trait\SqliteAdapterTrait;
+use ContenirTest\Db\Model\Trait\TestDatabaseTrait;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
@@ -30,7 +29,7 @@ use stdClass;
 #[Group('integration')]
 final class ContainerWiringTest extends TestCase
 {
-    use SqliteAdapterTrait;
+    use TestDatabaseTrait;
 
     #[Test]
     public function buildsCustomRepositoryWithSharedEntityManager(): void
@@ -83,7 +82,7 @@ final class ContainerWiringTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->setUpSqliteAdapter(...Schema::ALL);
+        $this->setUpTestDatabase();
     }
 
     private function container(): InMemoryContainer

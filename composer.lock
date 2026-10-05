@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2ae981f0f3dd794e2833edca2fbd04ba",
+    "content-hash": "d06fb519205a93b313c81b8ed1a9a326",
     "packages": [
         {
             "name": "brick/varexporter",
@@ -606,6 +606,128 @@
                 "source": "https://github.com/phar-io/version/tree/3.2.1"
             },
             "time": "2022-02-21T01:04:05+00:00"
+        },
+        {
+            "name": "php-db/phpdb-mysql",
+            "version": "0.4.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-db/phpdb-mysql.git",
+                "reference": "293ca1e03fc8b7fb7147d4d65715fa9e8f092f88"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-db/phpdb-mysql/zipball/293ca1e03fc8b7fb7147d4d65715fa9e8f092f88",
+                "reference": "293ca1e03fc8b7fb7147d4d65715fa9e8f092f88",
+                "shasum": ""
+            },
+            "require": {
+                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php-db/phpdb": "^0.6.0"
+            },
+            "require-dev": {
+                "ext-mysqli": "*",
+                "ext-pdo_mysql": "*",
+                "laminas/laminas-coding-standard": "^3.0.1",
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpunit/phpunit": "^11.5.42"
+            },
+            "suggest": {
+                "ext-mysqli": "Required for MySQLi support",
+                "ext-pdo_mysql": "Required for PDO MySQL support",
+                "laminas/laminas-eventmanager": "Required for TableGateway events support"
+            },
+            "type": "library",
+            "extra": {
+                "laminas": {
+                    "config-provider": "PhpDb\\Mysql\\ConfigProvider"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "PhpDb\\Mysql\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "MySQL support for php-db",
+            "homepage": "https://github.com/php-db/phpdb-mysql/discussions",
+            "keywords": [
+                "db",
+                "laminas",
+                "mezzio",
+                "mysql",
+                "php-db"
+            ],
+            "support": {
+                "forum": "https://github.com/php-db/phpdb-mysql/discussions",
+                "issues": "https://github.com/php-db/phpdb-mysql/issues",
+                "source": "https://github.com/php-db/phpdb-mysql"
+            },
+            "time": "2026-06-23T02:33:37+00:00"
+        },
+        {
+            "name": "php-db/phpdb-pgsql",
+            "version": "0.1.x-dev",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-db/phpdb-pgsql.git",
+                "reference": "deddafa64572441612da4dbeb7b1b8cee76980de"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-db/phpdb-pgsql/zipball/deddafa64572441612da4dbeb7b1b8cee76980de",
+                "reference": "deddafa64572441612da4dbeb7b1b8cee76980de",
+                "shasum": ""
+            },
+            "require": {
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php-db/phpdb": "^0.6.0"
+            },
+            "require-dev": {
+                "ext-pdo_pgsql": "*",
+                "ext-pgsql": "*",
+                "infection/infection": "^0.34.1",
+                "php-db/phpdb-qa-tools": "0.1.x-dev",
+                "phpunit/phpunit": "^11.5.42"
+            },
+            "suggest": {
+                "ext-pdo_pgsql": "*",
+                "ext-pgsql": "*",
+                "laminas/laminas-servicemanager": "Laminas\\ServiceManager component"
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "laminas": {
+                    "config-provider": "PhpDb\\Pgsql\\ConfigProvider"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "PhpDb\\Pgsql\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "PostgreSQL support for php-db",
+            "homepage": "https://php-db.dev",
+            "keywords": [
+                "db",
+                "pgsql",
+                "php-db"
+            ],
+            "support": {
+                "forum": "https://github.com/php-db/phpdb-pgsql/discussions",
+                "issues": "https://github.com/php-db/phpdb-pgsql/issues",
+                "source": "https://github.com/php-db/phpdb-pgsql"
+            },
+            "time": "2026-08-31T03:38:13+00:00"
         },
         {
             "name": "php-db/phpdb-qa-tools",
@@ -2310,6 +2432,7 @@
     "minimum-stability": "dev",
     "stability-flags": {
         "php-db/phpdb": 20,
+        "php-db/phpdb-pgsql": 20,
         "php-db/phpdb-qa-tools": 20
     },
     "prefer-stable": true,
