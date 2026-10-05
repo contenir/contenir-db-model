@@ -132,4 +132,4 @@ QA configuration comes from
 
 ## License
 
-BSD-3-Clause.
+BSD-3-Clause. See [LICENSE.md](LICENSE.md).
