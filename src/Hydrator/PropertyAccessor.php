@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Contenir\Db\Model\Hydrator;
 
+use Closure;
 use Contenir\Db\Model\Exception\HydrationException;
 use ReflectionClass;
 use ReflectionException;
@@ -66,6 +67,24 @@ final class PropertyAccessor
     public function isReadOnly(object $entity, string $property): bool
     {
         return $this->property($entity, $property)->isReadOnly();
+    }
+
+    /**
+     * Return a property to the uninitialised state. Reflection cannot
+     * unset, so a closure bound to the declaring class does it.
+     *
+     * @throws HydrationException
+     *
+     * @mago-expect analysis:string-member-selector
+     */
+    public function reset(object $entity, string $property): void
+    {
+        $declaring = $this->property($entity, $property)->getDeclaringClass()->getName();
+        $unset     = function (string $name): void {
+            unset($this->{$name});
+        };
+
+        Closure::bind($unset, $entity, $declaring)?->__invoke($property);
     }
 
     /**

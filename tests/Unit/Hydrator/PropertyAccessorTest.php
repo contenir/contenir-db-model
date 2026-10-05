@@ -7,6 +7,7 @@ namespace ContenirTest\Db\Model\Unit\Hydrator;
 use Contenir\Db\Model\Exception\HydrationException;
 use Contenir\Db\Model\Hydrator\PropertyAccessor;
 use ContenirTest\Db\Model\TestAsset\Entity\Note;
+use ContenirTest\Db\Model\TestAsset\Entity\Widget;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
@@ -62,6 +63,17 @@ final class PropertyAccessorTest extends TestCase
         $this->accessor->set($note, 'body', 'hello');
 
         static::assertSame([false, true], [$before, $this->accessor->isInitialized($note, 'body')]);
+    }
+
+    #[Test]
+    public function resetReturnsPropertyToUninitialised(): void
+    {
+        $widget     = new Widget();
+        $widget->id = 5;
+
+        $this->accessor->reset($widget, 'id');
+
+        static::assertFalse($this->accessor->isInitialized($widget, 'id'));
     }
 
     #[Test]

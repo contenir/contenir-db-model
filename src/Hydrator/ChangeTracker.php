@@ -85,6 +85,23 @@ final class ChangeTracker
     }
 
     /**
+     * Put back a snapshot previously read with {@see self::snapshotOf()},
+     * or stop tracking when it was null.
+     *
+     * @param array<string, int|float|string|bool|null>|null $snapshot
+     */
+    public function restore(object $entity, ?array $snapshot): void
+    {
+        if (null === $snapshot) {
+            $this->forget($entity);
+
+            return;
+        }
+
+        $this->snapshots[$entity] = $snapshot;
+    }
+
+    /**
      * Record the entity's current values as its persisted state.
      *
      * @template T of object
