@@ -28,11 +28,11 @@ attributes. There are no base classes and no magic `__get`/`__set`.
 ## Installation
 
 ```bash
-composer require contenir/contenir-db-model:2.0.x-dev
+composer require contenir/contenir-db-model:^2.0@RC
 ```
 
-Until `php-db/phpdb` 0.6.0 and this package's 2.0.0 are tagged, the
-consuming project needs `"minimum-stability": "dev"` and
+The latest development version is `v2.x-dev`. Until `php-db/phpdb` 0.6.0
+and this package's 2.0.0 are tagged, the consuming project needs `"minimum-stability": "dev"` and
 `"prefer-stable": true`.
 
 With `laminas/laminas-component-installer`, the `ConfigProvider` (Mezzio)
