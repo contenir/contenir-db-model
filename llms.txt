@@ -10,17 +10,21 @@ Key facts for code generation:
 - `#[Version]` must be a non-nullable `int`. Generated ids and versions cannot be `readonly`.
 - Invalid mappings throw `Contenir\Db\Model\Exception\MappingException` when metadata is first built.
 - Use `CachedMetadataFactory` (PSR-16) in production. Clear its cache on deploy.
+- Types: `int`/`float`/`string`/`bool`, any `BackedEnum` and any `DateTimeInterface` convert automatically. `array` needs `#[Column(type: 'json')]`. A date-only column uses `#[Column(type: 'date')]`. Custom converters go through `TypeRegistry::withDefaults()->withConverter($nameOrClass, $converter)`.
+- A database NULL loaded into a non-nullable property throws `TypeConversionException`. Declare nullable columns as `?type`.
 
 ## Docs
 
 - [Mapping entities](docs/mapping.md): every attribute and parameter, key defaults, validation rules, and the EntityMetadata API
 - [Metadata caching](docs/metadata-caching.md): CachedMetadataFactory, cache keys, failure behaviour, invalidation
+- [Type conversion](docs/types.md): built-in converters and their accepted inputs, resolution order, nulls, custom converters
 
 ## Source
 
 - [Mapping attributes](src/Mapping/): Table, Column, Id, Version, HasOne, HasMany, BelongsTo, ManyToMany, Via
 - [Metadata](src/Metadata/): AttributeMetadataFactory, CachedMetadataFactory, EntityMetadata, FieldMetadata, RelationMetadata
-- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, StaleEntityException
+- [Types](src/Type/): TypeRegistry, TypeConverterInterface and the built-in converters
+- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, TypeConversionException, StaleEntityException
 
 ## Optional
 

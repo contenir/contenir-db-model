@@ -86,7 +86,7 @@ or `#[Version]`.
 - `name`: the column name. It defaults to the property name exactly as
   written. No snake_case conversion happens, so `createdAt` needs
   `#[Column('created_at')]` to reach a `created_at` column.
-- `type`: the name of a registered type converter. It defaults to the
+- `type`: the name of a registered [type converter](types.md). It defaults to the
   property's declared type. It is required when the property has a union or
   intersection type, such as `#[Column(type: 'json')] public array|string $meta;`.
 
