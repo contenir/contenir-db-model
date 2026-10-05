@@ -12,20 +12,24 @@ Key facts for code generation:
 - Use `CachedMetadataFactory` (PSR-16) in production. Clear its cache on deploy.
 - Types: `int`/`float`/`string`/`bool`, any `BackedEnum` and any `DateTimeInterface` convert automatically. `array` needs `#[Column(type: 'json')]`. A date-only column uses `#[Column(type: 'date')]`. Custom converters go through `TypeRegistry::withDefaults()->withConverter($nameOrClass, $converter)`.
 - A database NULL loaded into a non-nullable property throws `TypeConversionException`. Declare nullable columns as `?type`.
+- Entity constructors are NOT called when loading. Property defaults apply, and mapped properties may be private, protected or readonly (inherited ones too).
+- Saves write only the columns that changed since load. Changes are compared in database form, so an equal DateTime or the same enum case is not a change.
 
 ## Docs
 
 - [Mapping entities](docs/mapping.md): every attribute and parameter, key defaults, validation rules, and the EntityMetadata API
 - [Metadata caching](docs/metadata-caching.md): CachedMetadataFactory, cache keys, failure behaviour, invalidation
 - [Type conversion](docs/types.md): built-in converters and their accepted inputs, resolution order, nulls, custom converters
+- [Entity lifecycle](docs/entity-lifecycle.md): how rows become entities, refresh rules for readonly properties, snapshot-based change tracking
 
 ## Source
 
 - [Mapping attributes](src/Mapping/): Table, Column, Id, Version, HasOne, HasMany, BelongsTo, ManyToMany, Via
 - [Metadata](src/Metadata/): AttributeMetadataFactory, CachedMetadataFactory, EntityMetadata, FieldMetadata, RelationMetadata
 - [Types](src/Type/): TypeRegistry, TypeConverterInterface and the built-in converters
-- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, TypeConversionException, StaleEntityException
+- [Hydrator](src/Hydrator/): EntityHydrator, ChangeTracker, PropertyAccessor (internal)
+- [Exceptions](src/Exception/): ExceptionInterface, InvalidArgumentException, RuntimeException, MappingException, TypeConversionException, HydrationException, StaleEntityException
 
 ## Optional
 
-- [Test fixtures](tests/TestAsset/Entity/): small example entities (User, Order, Profile, Tag, Membership) covering every mapping feature
+- [Test fixtures](tests/TestAsset/Entity/): small example entities (User, Order, Profile, Tag, Membership, Note) covering every mapping feature
