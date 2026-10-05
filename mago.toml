@@ -7,7 +7,9 @@ includes = ["vendor"]
 
 [linter.rules]
 # The shared base excludes "test/"; this repository keeps its suites under "tests/".
-too-many-methods = { exclude = ["tests/"] }
+# Exception classes are message catalogues with one named constructor per failure,
+# following php-db's own exclusion of its exception directories.
+too-many-methods = { exclude = ["tests/", "src/Exception/"] }
 
 [analyzer]
 excludes = ["tests"]
