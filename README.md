@@ -58,6 +58,7 @@ final class User
 | [Metadata caching](docs/metadata-caching.md): PSR-16 cache for mapping metadata | Available |
 | [Type conversion](docs/types.md): built-in converters, resolution order, custom converters | Available |
 | [Entity lifecycle](docs/entity-lifecycle.md): hydration, refresh, change tracking, writing entity classes | Available |
+| [Sensitive data](docs/sensitive-data.md): `SensitiveString` and `#[Column(sensitive: true)]` | Available |
 | Repositories, the entity manager and the identity map | Planned |
 | Relation loading and `preload()` | Planned |
 | Upgrading from 1.x | Planned |

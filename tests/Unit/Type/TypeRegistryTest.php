@@ -12,9 +12,11 @@ use Contenir\Db\Model\Type\DateTimeType;
 use Contenir\Db\Model\Type\FloatType;
 use Contenir\Db\Model\Type\IntegerType;
 use Contenir\Db\Model\Type\JsonType;
+use Contenir\Db\Model\Type\SensitiveStringType;
 use Contenir\Db\Model\Type\StringType;
 use Contenir\Db\Model\Type\TypeConverterInterface;
 use Contenir\Db\Model\Type\TypeRegistry;
+use Contenir\Db\Model\Value\SensitiveString;
 use ContenirTest\Db\Model\TestAsset\Entity\OrderStatus;
 use ContenirTest\Db\Model\TestAsset\Factory\FieldFactory;
 use DateTime;
@@ -46,6 +48,7 @@ final class TypeRegistryTest extends TestCase
             'DateTimeImmutable'      => [FieldFactory::make(DateTimeImmutable::class), DateTimeType::class],
             'DateTime'               => [FieldFactory::make(DateTime::class), DateTimeType::class],
             'DateTimeInterface'      => [FieldFactory::make(DateTimeInterface::class), DateTimeType::class],
+            'SensitiveString'        => [FieldFactory::make(SensitiveString::class), SensitiveStringType::class],
             'explicit name wins'     => [FieldFactory::make('string', typeName: 'json'), JsonType::class],
             'explicit name on union' => [FieldFactory::make(null, typeName: 'date'), DateTimeType::class],
         ];

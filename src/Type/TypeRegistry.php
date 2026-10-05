@@ -7,6 +7,7 @@ namespace Contenir\Db\Model\Type;
 use BackedEnum;
 use Contenir\Db\Model\Exception\TypeConversionException;
 use Contenir\Db\Model\Metadata\FieldMetadata;
+use Contenir\Db\Model\Value\SensitiveString;
 use DateTimeInterface;
 
 use function array_key_exists;
@@ -37,14 +38,15 @@ final readonly class TypeRegistry
     public static function withDefaults(): self
     {
         return new self([
-            'int'      => new IntegerType(),
-            'float'    => new FloatType(),
-            'string'   => new StringType(),
-            'bool'     => new BooleanType(),
-            'datetime' => new DateTimeType(),
-            'date'     => new DateTimeType('Y-m-d'),
-            'json'     => new JsonType(),
-            'enum'     => new BackedEnumType(),
+            'int'                  => new IntegerType(),
+            'float'                => new FloatType(),
+            'string'               => new StringType(),
+            'bool'                 => new BooleanType(),
+            'datetime'             => new DateTimeType(),
+            'date'                 => new DateTimeType('Y-m-d'),
+            'json'                 => new JsonType(),
+            'enum'                 => new BackedEnumType(),
+            SensitiveString::class => new SensitiveStringType(),
         ]);
     }
 

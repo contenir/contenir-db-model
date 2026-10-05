@@ -9,7 +9,6 @@ use Contenir\Db\Model\Mapping\Column;
 use Contenir\Db\Model\Mapping\Id;
 use Contenir\Db\Model\Mapping\Version;
 use ReflectionAttribute;
-use ReflectionNamedType;
 use ReflectionProperty;
 
 /**
@@ -51,7 +50,7 @@ final readonly class PropertyFieldReader
         $field = new FieldMetadata(
             $name,
             $column->name ?? $name,
-            self::typeOf($className, $property, $column?->type),
+            FieldTypeResolver::resolve($className, $property, $column),
             $role ?? FieldRole::Column,
             $property->isReadOnly(),
         );
@@ -80,25 +79,5 @@ final readonly class PropertyFieldReader
         }
 
         return $version ? FieldRole::Version : null;
-    }
-
-    /**
-     * @param class-string $className
-     *
-     * @throws MappingException
-     */
-    private static function typeOf(string $className, ReflectionProperty $property, ?string $typeName): FieldType
-    {
-        $type = $property->getType();
-        if (null === $type) {
-            throw MappingException::untypedProperty($className, $property->getName());
-        }
-
-        $phpType = $type instanceof ReflectionNamedType ? $type->getName() : null;
-        if (null === $phpType && null === $typeName) {
-            throw MappingException::ambiguousType($className, $property->getName());
-        }
-
-        return new FieldType($phpType, $type->allowsNull(), $typeName);
     }
 }

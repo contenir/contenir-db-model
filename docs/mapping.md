@@ -81,7 +81,7 @@ properties are not visible to the concrete class, so they are not mapped.
 A property is column-mapped when it has at least one of `#[Column]`, `#[Id]`
 or `#[Version]`.
 
-### `#[Column(name: null, type: null)]`
+### `#[Column(name: null, type: null, sensitive: false)]`
 
 - `name`: the column name. It defaults to the property name exactly as
   written. No snake_case conversion happens, so `createdAt` needs
@@ -89,6 +89,9 @@ or `#[Version]`.
 - `type`: the name of a registered [type converter](types.md). It defaults to the
   property's declared type. It is required when the property has a union or
   intersection type, such as `#[Column(type: 'json')] public array|string $meta;`.
+- `sensitive`: keeps the column's values out of this library's exception
+  messages and output. Properties typed `SensitiveString` are sensitive
+  automatically. See [sensitive data](sensitive-data.md).
 
 ### `#[Id(generated: false)]`
 

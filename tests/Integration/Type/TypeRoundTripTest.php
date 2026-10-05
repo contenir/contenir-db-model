@@ -6,6 +6,7 @@ namespace ContenirTest\Db\Model\Integration\Type;
 
 use Contenir\Db\Model\Metadata\FieldMetadata;
 use Contenir\Db\Model\Type\TypeRegistry;
+use Contenir\Db\Model\Value\SensitiveString;
 use ContenirTest\Db\Model\TestAsset\Entity\OrderStatus;
 use ContenirTest\Db\Model\TestAsset\Entity\Priority;
 use ContenirTest\Db\Model\TestAsset\Factory\FieldFactory;
@@ -30,23 +31,27 @@ final class TypeRoundTripTest extends TestCase
     public static function valueProvider(): array
     {
         return [
-            'int'           => [FieldFactory::make('int'), -42],
-            'float'         => [FieldFactory::make('float'), 3.5],
-            'string'        => [FieldFactory::make('string'), 'Zoë'],
-            'bool true'     => [FieldFactory::make('bool'), true],
-            'bool false'    => [FieldFactory::make('bool'), false],
-            'datetime'      => [
+            'int'              => [FieldFactory::make('int'), -42],
+            'float'            => [FieldFactory::make('float'), 3.5],
+            'string'           => [FieldFactory::make('string'), 'Zoë'],
+            'bool true'        => [FieldFactory::make('bool'), true],
+            'bool false'       => [FieldFactory::make('bool'), false],
+            'datetime'         => [
                 FieldFactory::make(DateTimeImmutable::class),
                 new DateTimeImmutable('2024-03-04 05:06:07'),
             ],
-            'date'          => [
+            'date'             => [
                 FieldFactory::make(DateTimeImmutable::class, typeName: 'date'),
                 new DateTimeImmutable('2024-03-04'),
             ],
-            'json'          => [FieldFactory::make('array', typeName: 'json'), ['a' => [1, 2], 'b' => null]],
-            'string enum'   => [FieldFactory::make(OrderStatus::class), OrderStatus::Shipped],
-            'int enum'      => [FieldFactory::make(Priority::class), Priority::High],
-            'nullable null' => [FieldFactory::make('int', nullable: true), null],
+            'json'             => [FieldFactory::make('array', typeName: 'json'), ['a' => [1, 2], 'b' => null]],
+            'string enum'      => [FieldFactory::make(OrderStatus::class), OrderStatus::Shipped],
+            'int enum'         => [FieldFactory::make(Priority::class), Priority::High],
+            'sensitive string' => [
+                FieldFactory::make(SensitiveString::class, sensitive: true),
+                new SensitiveString('hash'),
+            ],
+            'nullable null'    => [FieldFactory::make('int', nullable: true), null],
         ];
     }
 
