@@ -22,7 +22,23 @@ Key facts for code generation:
 - `#[Version]` guards updates and deletes. A concurrent change throws `StaleEntityException`. A rolled-back `transactional()` restores entity tracking, so retries work.
 - Saves write only the columns that changed since load. Changes are compared in database form, so an equal DateTime or the same enum case is not a change.
 
+## Do not use 1.x APIs
+
+These no longer exist in 2.x. Use the replacement:
+
+- `AbstractEntity`/`BaseEntity`, `$columns`/`$primaryKeys`/`$relations` arrays → a plain class with `#[Table]`, `#[Id]`, `#[Column]` and relation attributes.
+- `AbstractRepository`/`BaseRepository`, `RepositoryLookup` → `$em->getRepository(Entity::class)` or a `Repository` subclass.
+- `$repo->save()`/`delete()`/`transactional()`, `MODE_INSERT`/`MODE_UPDATE` → `$em->save()`/`delete()`/`transactional()`, with insert vs update decided automatically.
+- `find($where)`/`findByField($col, $v)` with column names → `findBy(['property' => $v])`.
+- `getArrayCopy()`/`populate()`/`exchangeArray()`/`synch()`/`markClean()` → none. Use properties; the manager tracks changes.
+- `preloadRelations($e, [...])` → `$repo->preload($e, 'a', 'b.c')`.
+- A missing single relation used to be `false`; it is now `null`. A to-many relation used to be an array; it is now a `Collection`.
+- `Laminas\Db\…` → `PhpDb\…`. Config key `model` → `contenir_db_model`.
+
 ## Docs
+
+- [Upgrade guide](UPGRADE-2.0.md): every 1.x API mapped to 2.x, plus a checklist
+- [Changelog](CHANGELOG.md)
 
 - [Mapping entities](docs/mapping.md): every attribute and parameter, key defaults, validation rules, and the EntityMetadata API
 - [Metadata caching](docs/metadata-caching.md): CachedMetadataFactory, cache keys, failure behaviour, invalidation

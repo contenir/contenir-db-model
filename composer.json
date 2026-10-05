@@ -49,6 +49,9 @@
         "laminas": {
             "component": "Contenir\\Db\\Model",
             "config-provider": "Contenir\\Db\\Model\\ConfigProvider"
+        },
+        "branch-alias": {
+            "dev-v2": "2.0.x-dev"
         }
     },
     "scripts": {
