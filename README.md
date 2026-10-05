@@ -122,6 +122,21 @@ composer test-coverage            # line coverage to clover.xml (Xdebug or PCOV)
 composer test-coverage-branches   # line + branch coverage across both suites (Xdebug)
 ```
 
+The integration suite runs against in-memory SQLite by default. To run it
+against MySQL or PostgreSQL, set `DB_PLATFORM` (and `DB_HOST`, `DB_PORT`,
+`DB_NAME`, `DB_USER`, `DB_PASSWORD` as needed). `compose.yml` starts both
+databases:
+
+```bash
+docker compose up -d
+DB_PLATFORM=mysql DB_PORT=33306 DB_PASSWORD=secret composer test-integration
+DB_PLATFORM=pgsql DB_PORT=55432 DB_USER=postgres DB_PASSWORD=secret composer test-integration
+```
+
+Every test recreates the fixture schema, including a `crm` schema or
+database, so use a disposable database and a user allowed to create it.
+CI runs the suite on SQLite, MySQL 8.4 and PostgreSQL 17.
+
 `test-coverage-branches` runs each test directory in its own process and
 merges the results, because Xdebug 3.4's `--path-coverage` intermittently
 crashes on long runs. Pass `-- --clover clover.xml` or

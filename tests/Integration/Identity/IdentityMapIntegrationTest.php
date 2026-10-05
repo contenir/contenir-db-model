@@ -14,7 +14,7 @@ use Contenir\Db\Model\Metadata\AttributeMetadataFactory;
 use Contenir\Db\Model\Relation\RelationInitializer;
 use Contenir\Db\Model\Type\TypeRegistry;
 use ContenirTest\Db\Model\TestAsset\Entity\Order;
-use ContenirTest\Db\Model\Trait\SqliteAdapterTrait;
+use ContenirTest\Db\Model\Trait\TestDatabaseTrait;
 use PhpDb\Sql\Sql;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Group;
@@ -25,7 +25,7 @@ use PHPUnit\Framework\TestCase;
 #[Group('integration')]
 final class IdentityMapIntegrationTest extends TestCase
 {
-    use SqliteAdapterTrait;
+    use TestDatabaseTrait;
 
     #[Test]
     public function overlappingQueriesShareEntityInstances(): void
@@ -59,8 +59,7 @@ final class IdentityMapIntegrationTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->setUpSqliteAdapter(
-            'CREATE TABLE orders (id INTEGER PRIMARY KEY, user_id INTEGER, total INTEGER, status TEXT, placed_at TEXT)',
+        $this->setUpTestDatabase(
             "INSERT INTO orders VALUES (1, 9, 100, 'pending', '2024-01-01 00:00:00')",
             "INSERT INTO orders VALUES (2, 9, 200, 'shipped', '2024-01-02 00:00:00')",
         );

@@ -6,3 +6,4 @@
 /mago.toml          export-ignore
 /phpunit.xml.dist   export-ignore
 /composer.lock      export-ignore
+/compose.yml        export-ignore

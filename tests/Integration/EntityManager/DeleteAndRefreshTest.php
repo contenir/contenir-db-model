@@ -17,9 +17,8 @@ use Contenir\Db\Model\Persistence\StatementRunner;
 use Contenir\Db\Model\Persistence\TransactionManager;
 use Contenir\Db\Model\Persistence\VersionLock;
 use Contenir\Db\Model\Persistence\WriteJournal;
-use ContenirTest\Db\Model\TestAsset\Db\Schema;
 use ContenirTest\Db\Model\TestAsset\Factory\EntityFactory;
-use ContenirTest\Db\Model\Trait\SqliteAdapterTrait;
+use ContenirTest\Db\Model\Trait\TestDatabaseTrait;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
@@ -41,7 +40,7 @@ use PHPUnit\Framework\TestCase;
 #[Group('integration')]
 final class DeleteAndRefreshTest extends TestCase
 {
-    use SqliteAdapterTrait;
+    use TestDatabaseTrait;
 
     private EntityManager $em;
 
@@ -72,7 +71,7 @@ final class DeleteAndRefreshTest extends TestCase
     #[Test]
     public function deleteOfUnmanagedEntityUsesItsKey(): void
     {
-        $this->pdo->exec("INSERT INTO tags (id, name, active) VALUES (7, 'x', 1)");
+        $this->pdo->exec("INSERT INTO tags (id, name, active) VALUES (7, 'x', TRUE)");
         $tag     = EntityFactory::tag('x');
         $tag->id = 7;
 
@@ -142,7 +141,7 @@ final class DeleteAndRefreshTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->setUpSqliteAdapter(...Schema::ALL);
+        $this->setUpTestDatabase();
         $this->em = new EntityManager($this->adapter);
     }
 }

@@ -12,13 +12,12 @@ use Contenir\Db\Model\Query\CriteriaTranslator;
 use Contenir\Db\Model\Query\EntityReader;
 use Contenir\Db\Model\Query\QueryContext;
 use Contenir\Db\Model\Repository;
-use ContenirTest\Db\Model\TestAsset\Db\Schema;
 use ContenirTest\Db\Model\TestAsset\Entity\Membership;
 use ContenirTest\Db\Model\TestAsset\Entity\Order;
 use ContenirTest\Db\Model\TestAsset\Entity\OrderStatus;
 use ContenirTest\Db\Model\TestAsset\Entity\User;
 use ContenirTest\Db\Model\TestAsset\Repository\UserRepository;
-use ContenirTest\Db\Model\Trait\SqliteAdapterTrait;
+use ContenirTest\Db\Model\Trait\TestDatabaseTrait;
 use DateTimeImmutable;
 use PhpDb\Sql\Select;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -40,7 +39,7 @@ use function iterator_to_array;
 #[Group('integration')]
 final class RepositoryTest extends TestCase
 {
-    use SqliteAdapterTrait;
+    use TestDatabaseTrait;
 
     private EntityManager $em;
 
@@ -264,17 +263,14 @@ final class RepositoryTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->setUpSqliteAdapter(
-            ...Schema::ALL,
-            ...[
-                "INSERT INTO users VALUES (1, 'a@example.com', 'Alice', '2024-01-01 00:00:00', 1)",
-                "INSERT INTO users VALUES (2, 'b@test.org', NULL, '2024-01-02 00:00:00', 1)",
-                "INSERT INTO users VALUES (3, 'c@example.com', 'Cara', '2024-01-03 00:00:00', 1)",
-                "INSERT INTO orders VALUES (1, 1, 100, 'pending', '2024-02-01 00:00:00')",
-                "INSERT INTO orders VALUES (2, 1, 300, 'shipped', '2024-02-02 00:00:00')",
-                "INSERT INTO orders VALUES (3, 3, 200, 'shipped', '2024-02-03 00:00:00')",
-                "INSERT INTO crm.memberships VALUES (1, 2, 'owner', '{}')",
-            ],
+        $this->setUpTestDatabase(
+            "INSERT INTO users VALUES (1, 'a@example.com', 'Alice', '2024-01-01 00:00:00', 1)",
+            "INSERT INTO users VALUES (2, 'b@test.org', NULL, '2024-01-02 00:00:00', 1)",
+            "INSERT INTO users VALUES (3, 'c@example.com', 'Cara', '2024-01-03 00:00:00', 1)",
+            "INSERT INTO orders VALUES (1, 1, 100, 'pending', '2024-02-01 00:00:00')",
+            "INSERT INTO orders VALUES (2, 1, 300, 'shipped', '2024-02-02 00:00:00')",
+            "INSERT INTO orders VALUES (3, 3, 200, 'shipped', '2024-02-03 00:00:00')",
+            "INSERT INTO crm.memberships VALUES (1, 2, 'owner', '{}')",
         );
         $this->em = new EntityManager($this->adapter);
     }

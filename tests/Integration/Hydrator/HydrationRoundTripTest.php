@@ -11,7 +11,7 @@ use Contenir\Db\Model\Metadata\EntityMetadata;
 use Contenir\Db\Model\Type\TypeRegistry;
 use ContenirTest\Db\Model\TestAsset\Entity\Order;
 use ContenirTest\Db\Model\TestAsset\Entity\OrderStatus;
-use ContenirTest\Db\Model\Trait\SqliteAdapterTrait;
+use ContenirTest\Db\Model\Trait\TestDatabaseTrait;
 use DateTimeImmutable;
 use PhpDb\Sql\Sql;
 use PHPUnit\Framework\Attributes\CoversNothing;
@@ -23,7 +23,7 @@ use PHPUnit\Framework\TestCase;
 #[Group('integration')]
 final class HydrationRoundTripTest extends TestCase
 {
-    use SqliteAdapterTrait;
+    use TestDatabaseTrait;
 
     private EntityHydrator $hydrator;
 
@@ -71,9 +71,7 @@ final class HydrationRoundTripTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->setUpSqliteAdapter(
-            'CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, total INTEGER NOT NULL, '
-                . 'status TEXT NOT NULL, placed_at TEXT NOT NULL)',
+        $this->setUpTestDatabase(
             "INSERT INTO orders (user_id, total, status, placed_at) VALUES (9, 1250, 'shipped', '2024-03-04 05:06:07')",
         );
         $this->hydrator = new EntityHydrator(TypeRegistry::withDefaults());
