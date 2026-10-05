@@ -85,13 +85,17 @@ final readonly class EntityReader
     }
 
     /**
+     * The select to build a query on: a clone of $from when given (so the
+     * caller's object is never modified), otherwise a select over the
+     * entity's table listing every mapped column.
+     *
      * @template T of object
      *
      * @param EntityMetadata<T> $metadata
      */
-    public function select(EntityMetadata $metadata): Select
+    public function select(EntityMetadata $metadata, ?Select $from = null): Select
     {
-        return $this->rows->select($metadata);
+        return null === $from ? $this->rows->select($metadata) : clone $from;
     }
 
     /**

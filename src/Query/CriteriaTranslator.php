@@ -31,7 +31,8 @@ final readonly class CriteriaTranslator
     ) {}
 
     /**
-     * Add criteria and ordering to $select.
+     * Add criteria and ordering to $select, with columns qualified by the
+     * entity's table.
      *
      * @template T of object
      *
@@ -44,12 +45,12 @@ final readonly class CriteriaTranslator
      */
     public function apply(EntityMetadata $metadata, Select $select, array $criteria, array $orderBy): Select
     {
-        $where = $this->where($metadata, $criteria);
+        $where = ColumnQualifier::qualify($metadata, $this->where($metadata, $criteria));
         if ([] !== $where) {
             $select->where($where);
         }
 
-        $order = $this->order($metadata, $orderBy);
+        $order = ColumnQualifier::qualify($metadata, $this->order($metadata, $orderBy));
 
         return [] === $order ? $select : $select->order($order);
     }

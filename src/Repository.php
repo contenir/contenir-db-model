@@ -12,6 +12,7 @@ use Contenir\Db\Model\Exception\QueryException;
 use Contenir\Db\Model\Exception\RelationException;
 use Contenir\Db\Model\Exception\TypeConversionException;
 use Contenir\Db\Model\Metadata\EntityMetadata;
+use Contenir\Db\Model\Query\ColumnQualifier;
 use Contenir\Db\Model\Query\CriteriaTranslator;
 use Contenir\Db\Model\Query\EntityReader;
 use Generator;
@@ -119,9 +120,11 @@ class Repository
     /**
      * Find by primary key: a scalar for single-column keys, or an array
      * keyed by property name for composite keys. Already-loaded entities
-     * are returned without a query.
+     * are returned without a query, unless $select is given: it may add
+     * joins or conditions the entity must meet, so it always runs.
      *
      * @param int|string|array<string, mixed> $id
+     * @param Select|null                     $select base query; cloned, never modified
      *
      * @return T|null
      *
@@ -131,20 +134,28 @@ class Repository
      * @throws QueryException
      * @throws TypeConversionException
      */
-    public function find(int|string|array $id): ?object
+    public function find(int|string|array $id, ?Select $select = null): ?object
     {
         $identifier = $this->criteria->identifier($this->metadata, $id);
-        $managed    = $this->em->queryContext()->identityMap->get($this->metadata->className, $identifier);
+        $managed    = null === $select
+            ? $this->em->queryContext()->identityMap->get($this->metadata->className, $identifier)
+            : null;
         if (null !== $managed) {
             return $managed;
         }
 
-        return $this->reader->one($this->metadata, $this->reader->select($this->metadata)->where($identifier));
+        return $this->reader->one(
+            $this->metadata,
+            $this->reader
+                ->select($this->metadata, $select)
+                ->where(ColumnQualifier::qualify($this->metadata, $identifier)),
+        );
     }
 
     /**
      * @param array<string, mixed>  $criteria
      * @param array<string, string> $orderBy
+     * @param Select|null           $select   base query; cloned, never modified
      *
      * @return list<T>
      *
@@ -154,9 +165,19 @@ class Repository
      * @throws QueryException
      * @throws TypeConversionException
      */
-    public function findBy(array $criteria = [], array $orderBy = [], ?int $limit = null, ?int $offset = null): array
-    {
-        $select = $this->criteria->apply($this->metadata, $this->reader->select($this->metadata), $criteria, $orderBy);
+    public function findBy(
+        array $criteria = [],
+        array $orderBy = [],
+        ?int $limit = null,
+        ?int $offset = null,
+        ?Select $select = null,
+    ): array {
+        $select = $this->criteria->apply(
+            $this->metadata,
+            $this->reader->select($this->metadata, $select),
+            $criteria,
+            $orderBy,
+        );
         if (null !== $limit) {
             $select->limit($limit);
         }
@@ -171,6 +192,7 @@ class Repository
     /**
      * @param array<string, mixed>  $criteria
      * @param array<string, string> $orderBy
+     * @param Select|null           $select   base query; cloned, never modified
      *
      * @return T|null
      *
@@ -180,11 +202,16 @@ class Repository
      * @throws QueryException
      * @throws TypeConversionException
      */
-    public function findOneBy(array $criteria, array $orderBy = []): ?object
+    public function findOneBy(array $criteria, array $orderBy = [], ?Select $select = null): ?object
     {
         return $this->reader->one(
             $this->metadata,
-            $this->criteria->apply($this->metadata, $this->reader->select($this->metadata), $criteria, $orderBy),
+            $this->criteria->apply(
+                $this->metadata,
+                $this->reader->select($this->metadata, $select),
+                $criteria,
+                $orderBy,
+            ),
         );
     }
 
@@ -228,6 +255,7 @@ class Repository
      *
      * @param array<string, mixed>  $criteria
      * @param array<string, string> $orderBy
+     * @param Select|null           $select   base query; cloned, never modified
      *
      * @return Generator<int, T>
      *
@@ -237,11 +265,16 @@ class Repository
      * @throws QueryException
      * @throws TypeConversionException
      */
-    public function stream(array $criteria = [], array $orderBy = []): Generator
+    public function stream(array $criteria = [], array $orderBy = [], ?Select $select = null): Generator
     {
         return $this->reader->stream(
             $this->metadata,
-            $this->criteria->apply($this->metadata, $this->reader->select($this->metadata), $criteria, $orderBy),
+            $this->criteria->apply(
+                $this->metadata,
+                $this->reader->select($this->metadata, $select),
+                $criteria,
+                $orderBy,
+            ),
         );
     }
 }
