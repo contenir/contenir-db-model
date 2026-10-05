@@ -128,6 +128,7 @@ final readonly class RelationMetadataBuilder
             }
 
             $relations[$name] = $this->relationFor($owner, $name, $attributes[0]->newInstance());
+            RelationPropertyValidator::assertValid($owner->className, $property, $relations[$name]);
         }
 
         return $relations;

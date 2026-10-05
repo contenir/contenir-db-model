@@ -9,27 +9,20 @@ use Contenir\Db\Model\Mapping\Column;
 use Contenir\Db\Model\Mapping\Id;
 use Contenir\Db\Model\Mapping\Table;
 use Contenir\Db\Model\Relation\LazyRelationsTrait;
-use DateTimeImmutable;
 
-#[Table('orders')]
-final class Order
+/**
+ * Non-nullable BelongsTo whose foreign key may dangle in tests.
+ */
+#[Table('tickets')]
+final class Ticket
 {
     use LazyRelationsTrait;
 
-    #[Id(generated: true)]
-    public ?int $id = null;
+    #[Id]
+    public int $id;
 
     #[Column('user_id')]
     public int $userId;
-
-    #[Column]
-    public int $total;
-
-    #[Column]
-    public OrderStatus $status = OrderStatus::Pending;
-
-    #[Column('placed_at')]
-    public DateTimeImmutable $placedAt;
 
     #[BelongsTo(User::class, foreignKey: 'user_id')]
     public User $user;

@@ -32,6 +32,7 @@ for configuration.
 ## At a glance
 
 ```php
+use Contenir\Db\Model\Collection;
 use Contenir\Db\Model\EntityManager;
 use Contenir\Db\Model\Mapping\{Column, HasMany, Id, Table, Version};
 
@@ -50,8 +51,9 @@ final class User
     #[Version]
     public int $version = 1;
 
+    /** @var Collection<Order> */
     #[HasMany(Order::class, foreignKey: 'user_id')]
-    public iterable $orders;
+    public Collection $orders;
 }
 
 $em    = new EntityManager($adapter);
@@ -75,7 +77,7 @@ $em->save($user);   // UPDATE users SET email = ?, version = 2 WHERE id = 1 AND 
 | [Persisting entities](docs/persistence.md): `EntityManager` save, delete, refresh, optimistic locking, transactions | Available |
 | [Repositories and finders](docs/repositories.md): `find`, criteria, ordering, streaming, custom queries and repositories | Available |
 | [Container integration](docs/container.md): `ConfigProvider`, factories, configuration, entity manager lifetime | Available |
-| Relation loading and `preload()` | Planned |
+| [Relations](docs/relations.md): lazy `Collection`s, `LazyRelationsTrait`, `preload()` and N+1 avoidance | Available |
 | Upgrading from 1.x | Planned |
 
 [`llms.txt`](llms.txt) indexes these pages for LLM tooling.

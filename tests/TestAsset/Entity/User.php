@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ContenirTest\Db\Model\TestAsset\Entity;
 
+use Contenir\Db\Model\Collection;
 use Contenir\Db\Model\Mapping\Column;
 use Contenir\Db\Model\Mapping\HasMany;
 use Contenir\Db\Model\Mapping\HasOne;
@@ -12,11 +13,14 @@ use Contenir\Db\Model\Mapping\ManyToMany;
 use Contenir\Db\Model\Mapping\Table;
 use Contenir\Db\Model\Mapping\Version;
 use Contenir\Db\Model\Mapping\Via;
+use Contenir\Db\Model\Relation\LazyRelationsTrait;
 use DateTimeImmutable;
 
 #[Table('users')]
 final class User
 {
+    use LazyRelationsTrait;
+
     #[Id(generated: true)]
     public ?int $id = null;
 
@@ -33,16 +37,16 @@ final class User
     public int $version = 1;
 
     /**
-     * @var iterable<Order>
+     * @var Collection<Order>
      */
     #[HasMany(Order::class, foreignKey: 'user_id', orderBy: ['placed_at' => 'desc'])]
-    public iterable $orders;
+    public Collection $orders;
 
     #[HasOne(Profile::class, foreignKey: 'user_id')]
     public ?Profile $profile;
 
     /**
-     * @var iterable<Tag>
+     * @var Collection<Tag>
      */
     #[ManyToMany(
         Tag::class,
@@ -52,7 +56,7 @@ final class User
         ],
         where: ['active' => true],
     )]
-    public iterable $tags;
+    public Collection $tags;
 
     public string $transientNote = '';
 }

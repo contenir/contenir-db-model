@@ -23,8 +23,9 @@ are internal; repositories and the entity manager drive them for you.
 4. **Any visibility works.** Mapped properties may be `private`,
    `protected` or `public`, including `readonly` ones and those inherited
    from a parent class.
-5. **Relations are not loaded here.** Relation properties are left alone.
-   Loading them is covered by the relations docs, which are still to come.
+5. **Relations are prepared, not loaded.** To-many properties get a lazy
+   `Collection`, and to-one properties are left unset for lazy loading; see
+   [relations](relations.md).
 
 A database `NULL` for a non-nullable property throws
 `TypeConversionException`. Declare columns that can be NULL as `?type`.

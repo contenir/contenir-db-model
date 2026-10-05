@@ -9,6 +9,7 @@ property.
 All attributes live in `Contenir\Db\Model\Mapping`.
 
 ```php
+use Contenir\Db\Model\Collection;
 use Contenir\Db\Model\Mapping\BelongsTo;
 use Contenir\Db\Model\Mapping\Column;
 use Contenir\Db\Model\Mapping\HasMany;
@@ -34,14 +35,16 @@ final class User
     #[Version]
     public int $version = 1;
 
+    /** @var Collection<Order> */
     #[HasMany(Order::class, foreignKey: 'user_id', orderBy: ['placed_at' => 'desc'])]
-    public iterable $orders;
+    public Collection $orders;
 
     #[HasOne(Profile::class, foreignKey: 'user_id')]
-    public ?Profile $profile;
+    public ?Profile $profile;   // no default value: see relations
 
+    /** @var Collection<Tag> */
     #[ManyToMany(Tag::class, via: new Via('user_tag', foreignKey: 'user_id', relatedKey: 'tag_id'))]
-    public iterable $tags;
+    public Collection $tags;
 
     public string $notPersisted = '';
 }
@@ -60,9 +63,9 @@ final class Order
 }
 ```
 
-> **Relation property types are provisional.** To-many relations are typed
-> `iterable` above. A dedicated lazy `Collection` type replaces this when
-> relation loading lands, and this page will be updated then.
+Relation properties are typed `Collection` (to-many) or the target class
+(to-one) and must not declare a default value. Loading, lazy access and
+`preload()` are covered in [relations](relations.md).
 
 ## Class attribute
 
@@ -170,6 +173,8 @@ class and property. The following are rejected:
 - a `readonly` generated `#[Id]` or `#[Version]`;
 - a property that is both a relation and a column, or has more than one
   relation attribute;
+- a relation property not typed as `Collection` (to-many, not nullable) or
+  the target class (to-one), or declaring a default value;
 - relation key lists of different lengths, including against the `Via`
   columns;
 - relation keys, `where` columns or `orderBy` columns that are not mapped on

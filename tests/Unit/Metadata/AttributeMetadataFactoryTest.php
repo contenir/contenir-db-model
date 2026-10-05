@@ -29,6 +29,7 @@ use Contenir\Db\Model\Metadata\RelationKeys;
 use Contenir\Db\Model\Metadata\RelationKind;
 use Contenir\Db\Model\Metadata\RelationMetadata;
 use Contenir\Db\Model\Metadata\RelationMetadataBuilder;
+use Contenir\Db\Model\Metadata\RelationPropertyValidator;
 use ContenirTest\Db\Model\TestAsset\Entity\Account;
 use ContenirTest\Db\Model\TestAsset\Entity\Membership;
 use ContenirTest\Db\Model\TestAsset\Entity\Order;
@@ -52,6 +53,7 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(MappingValidator::class)]
 #[CoversClass(RelationMetadataBuilder::class)]
 #[CoversClass(RelationContext::class)]
+#[CoversClass(RelationPropertyValidator::class)]
 #[CoversClass(MappingException::class)]
 #[CoversClass(HasMany::class)]
 #[CoversClass(Table::class)]
@@ -76,31 +78,56 @@ final class AttributeMetadataFactoryTest extends TestCase
     public static function invalidMappingProvider(): array
     {
         return [
-            'unknown class'           => ['NoSuchEntity', 'does not exist'],
-            'no table'                => [Mapping\NoTableEntity::class, 'has no #[Table] attribute'],
-            'abstract'                => [Mapping\AbstractTableEntity::class, 'must be instantiable'],
-            'no identifier'           => [Mapping\NoIdentifierEntity::class, 'declares no #[Id] property'],
-            'static column'           => [Mapping\StaticColumnEntity::class, '$shared must not be static'],
-            'untyped column'          => [Mapping\UntypedColumnEntity::class, '$value must declare a type'],
-            'union type without type' => [Mapping\UnionTypeColumnEntity::class, 'name a converter'],
-            'duplicate column'        => [Mapping\DuplicateColumnEntity::class, 'maps column "label" more than once'],
-            'composite generated id'  => [Mapping\CompositeGeneratedIdEntity::class, 'generated keys must be the only'],
-            'multiple versions'       => [Mapping\MultipleVersionEntity::class, 'more than one #[Version]'],
-            'nullable version'        => [Mapping\NullableVersionEntity::class, 'must be typed as non-nullable int'],
-            'string version'          => [Mapping\StringVersionEntity::class, 'must be typed as non-nullable int'],
-            'readonly generated id'   => [Mapping\ReadonlyGeneratedIdEntity::class, 'must not be readonly'],
-            'id and version'          => [Mapping\IdAndVersionEntity::class, 'cannot be both #[Id] and #[Version]'],
-            'relation with column'    => [Mapping\RelationWithColumnEntity::class, 'both a relation and a column'],
-            'multiple relations'      => [Mapping\MultipleRelationsEntity::class, 'more than one relation attribute'],
-            'key count mismatch'      => [
+            'unknown class'              => ['NoSuchEntity', 'does not exist'],
+            'no table'                   => [Mapping\NoTableEntity::class, 'has no #[Table] attribute'],
+            'abstract'                   => [Mapping\AbstractTableEntity::class, 'must be instantiable'],
+            'no identifier'              => [Mapping\NoIdentifierEntity::class, 'declares no #[Id] property'],
+            'static column'              => [Mapping\StaticColumnEntity::class, '$shared must not be static'],
+            'untyped column'             => [Mapping\UntypedColumnEntity::class, '$value must declare a type'],
+            'union type without type'    => [Mapping\UnionTypeColumnEntity::class, 'name a converter'],
+            'duplicate column'           => [
+                Mapping\DuplicateColumnEntity::class,
+                'maps column "label" more than once',
+            ],
+            'composite generated id'     => [
+                Mapping\CompositeGeneratedIdEntity::class,
+                'generated keys must be the only',
+            ],
+            'multiple versions'          => [Mapping\MultipleVersionEntity::class, 'more than one #[Version]'],
+            'nullable version'           => [Mapping\NullableVersionEntity::class, 'must be typed as non-nullable int'],
+            'string version'             => [Mapping\StringVersionEntity::class, 'must be typed as non-nullable int'],
+            'readonly generated id'      => [Mapping\ReadonlyGeneratedIdEntity::class, 'must not be readonly'],
+            'id and version'             => [Mapping\IdAndVersionEntity::class, 'cannot be both #[Id] and #[Version]'],
+            'relation with column'       => [Mapping\RelationWithColumnEntity::class, 'both a relation and a column'],
+            'multiple relations'         => [
+                Mapping\MultipleRelationsEntity::class,
+                'more than one relation attribute',
+            ],
+            'key count mismatch'         => [
                 Mapping\KeyCountMismatchEntity::class,
                 'pairs 2 local column(s) [id, region]',
             ],
-            'join key count mismatch' => [Mapping\JoinKeyMismatchEntity::class, 'pairs 1 local column(s) [id]'],
-            'unknown relation column' => [Mapping\UnknownRelationColumnEntity::class, 'column "owner_id"'],
-            'unknown where column'    => [Mapping\UnknownWhereColumnEntity::class, 'column "archived"'],
-            'invalid order direction' => [Mapping\InvalidOrderDirectionEntity::class, 'must be ASC or DESC'],
-            'unsupported relation'    => [Mapping\CustomRelationEntity::class, 'unsupported attribute'],
+            'join key count mismatch'    => [Mapping\JoinKeyMismatchEntity::class, 'pairs 1 local column(s) [id]'],
+            'unknown relation column'    => [Mapping\UnknownRelationColumnEntity::class, 'column "owner_id"'],
+            'unknown where column'       => [Mapping\UnknownWhereColumnEntity::class, 'column "archived"'],
+            'invalid order direction'    => [Mapping\InvalidOrderDirectionEntity::class, 'must be ASC or DESC'],
+            'collection typed as array'  => [
+                Mapping\CollectionTypedAsArrayEntity::class,
+                '$orders must be typed as Contenir\Db\Model\Collection',
+            ],
+            'nullable collection'        => [
+                Mapping\NullableCollectionEntity::class,
+                'must be typed as non-nullable Contenir\Db\Model\Collection',
+            ],
+            'single relation wrong type' => [
+                Mapping\SingleRelationWrongTypeEntity::class,
+                '$user must be typed as ContenirTest\Db\Model\TestAsset\Entity\User',
+            ],
+            'relation with default'      => [
+                Mapping\RelationWithDefaultEntity::class,
+                '$profile must not declare a default value',
+            ],
+            'unsupported relation'       => [Mapping\CustomRelationEntity::class, 'unsupported attribute'],
         ];
     }
 

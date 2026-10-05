@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace ContenirTest\Db\Model\TestAsset\Entity;
 
+use Contenir\Db\Model\Collection;
 use Contenir\Db\Model\Mapping\Column;
+use Contenir\Db\Model\Mapping\HasMany;
 use Contenir\Db\Model\Mapping\Id;
 use Contenir\Db\Model\Mapping\Table;
 
@@ -30,4 +32,17 @@ final class Membership
         #[Column(type: 'json')]
         public array|string $meta = [],
     ) {}
+
+    /**
+     * @var Collection<Permission>
+     */
+    #[HasMany(
+        Permission::class,
+        foreignKey: ['group_id', 'user_id'],
+        localKey: ['group_id', 'user_id'],
+        orderBy: [
+            'name' => 'ASC',
+        ],
+    )]
+    public Collection $permissions;
 }

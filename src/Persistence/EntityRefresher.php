@@ -9,6 +9,7 @@ use Contenir\Db\Model\Exception\IdentityConflictException;
 use Contenir\Db\Model\Exception\PersistenceException;
 use Contenir\Db\Model\Exception\TypeConversionException;
 use Contenir\Db\Model\Metadata\EntityMetadata;
+use Contenir\Db\Model\Relation\RelationInitializer;
 
 /**
  * Reloads an entity's stored values over its in-memory state and makes
@@ -22,6 +23,7 @@ final readonly class EntityRefresher
         private RowFetcher $rows,
         private Session $session,
         private WriteJournal $journal,
+        private RelationInitializer $relations,
     ) {}
 
     /**
@@ -45,5 +47,6 @@ final readonly class EntityRefresher
         $this->journal->record($metadata, $entity);
         $this->session->hydrator->refresh($metadata, $entity, $row);
         $this->session->register($metadata, $entity, $this->session->identifiers->fromRow($metadata, $row));
+        $this->relations->reset($metadata, $entity);
     }
 }

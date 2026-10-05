@@ -58,6 +58,11 @@ final class MappingException extends InvalidArgumentException
         ));
     }
 
+    public static function invalidRelationType(string $className, string $property, string $expected): self
+    {
+        return new self(sprintf('Relation property %s::$%s must be typed as %s', $className, $property, $expected));
+    }
+
     public static function invalidVersionType(string $className, string $property): self
     {
         return new self(sprintf(
@@ -116,6 +121,15 @@ final class MappingException extends InvalidArgumentException
     public static function relationWithColumn(string $className, string $property): self
     {
         return new self(sprintf('Property %s::$%s cannot be both a relation and a column', $className, $property));
+    }
+
+    public static function relationWithDefault(string $className, string $property): self
+    {
+        return new self(sprintf(
+            'Relation property %s::$%s must not declare a default value; unloaded relations stay uninitialised',
+            $className,
+            $property,
+        ));
     }
 
     public static function staticProperty(string $className, string $property): self

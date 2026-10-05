@@ -30,6 +30,14 @@ final class PropertyAccessor
     /**
      * @throws HydrationException
      */
+    public function allowsNull(object $entity, string $property): bool
+    {
+        return $this->property($entity, $property)->getType()?->allowsNull() ?? true;
+    }
+
+    /**
+     * @throws HydrationException
+     */
     public function get(object $entity, string $property): mixed
     {
         return $this->property($entity, $property)->getValue($entity);

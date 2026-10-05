@@ -9,6 +9,7 @@ use Contenir\Db\Model\Exception\TypeConversionException;
 use Contenir\Db\Model\Metadata\EntityMetadata;
 use Contenir\Db\Model\Metadata\FieldMetadata;
 use Contenir\Db\Model\Type\TypeRegistry;
+use PhpDb\Sql\Select;
 
 use function array_key_exists;
 use function count;
@@ -28,6 +29,30 @@ final readonly class CriteriaTranslator
     public function __construct(
         private TypeRegistry $types,
     ) {}
+
+    /**
+     * Add criteria and ordering to $select.
+     *
+     * @template T of object
+     *
+     * @param EntityMetadata<T>     $metadata
+     * @param array<string, mixed>  $criteria
+     * @param array<string, string> $orderBy
+     *
+     * @throws QueryException
+     * @throws TypeConversionException
+     */
+    public function apply(EntityMetadata $metadata, Select $select, array $criteria, array $orderBy): Select
+    {
+        $where = $this->where($metadata, $criteria);
+        if ([] !== $where) {
+            $select->where($where);
+        }
+
+        $order = $this->order($metadata, $orderBy);
+
+        return [] === $order ? $select : $select->order($order);
+    }
 
     /**
      * Normalise a find() argument into a column-keyed identifier: a scalar
