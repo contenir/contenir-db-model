@@ -145,6 +145,7 @@ $users = $em->getRepository(User::class);
 | `findOne($where, $order)` | `findOneBy($criteria, $orderBy)`, or `find($id)` by primary key |
 | `findByField('email', $value)` / `findOneByField(...)` | `findBy(['email' => $value])` / `findOneBy(...)`. Arrays still become `IN (...)` |
 | `$where` as a `Closure` or `Sql\Where` | `createSelect()`, modify the `Select`, then `fetch($select)` / `fetchOne($select)` |
+| The `$select` argument of `find()` / `findOne()` / `findByField()` | The last argument of `find()`, `findOneBy()`, `findBy()` and `stream()` takes a base `Select`; criteria and ordering are added on top of a clone of it |
 | `select()` + `prepareSelect()` + `selectWith($select)` | `createSelect()` + `fetch($select)` |
 | `$order` strings like `'name DESC'` | `['name' => 'DESC']`, keyed by property name |
 | Repository `$where` / `$order` default properties (implicit scopes) | Removed. Add named methods to a custom repository (below) and use them instead |

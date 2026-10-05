@@ -8,6 +8,7 @@ use Contenir\Db\Model\EntityManager;
 use Contenir\Db\Model\Exception\HydrationException;
 use Contenir\Db\Model\Exception\QueryException;
 use Contenir\Db\Model\Persistence\RowFetcher;
+use Contenir\Db\Model\Query\ColumnQualifier;
 use Contenir\Db\Model\Query\CriteriaTranslator;
 use Contenir\Db\Model\Query\EntityReader;
 use Contenir\Db\Model\Query\QueryContext;
@@ -33,6 +34,7 @@ use function iterator_to_array;
 #[CoversClass(EntityReader::class)]
 #[CoversClass(RowFetcher::class)]
 #[CoversClass(CriteriaTranslator::class)]
+#[CoversClass(ColumnQualifier::class)]
 #[CoversClass(QueryContext::class)]
 #[CoversClass(EntityManager::class)]
 #[CoversClass(QueryException::class)]
@@ -161,6 +163,25 @@ final class RepositoryTest extends TestCase
     }
 
     #[Test]
+    public function findersApplyCriteriaAndOrderOnTopOfAJoinedSelect(): void
+    {
+        $users  = $this->em->getRepository(User::class);
+        $select = $users->createSelect()
+            ->join('orders', 'orders.user_id = users.id', [])
+            ->where(['orders.status' => 'shipped']);
+
+        static::assertSame(
+            [[3], [1, 3], 1, [1, 3]],
+            [
+                self::ids($users->findBy(['name' => 'Cara'], ['id' => 'ASC'], select: $select)),
+                self::ids($users->findBy([], ['id' => 'ASC'], select: $select)),
+                $users->findOneBy([], ['id' => 'ASC'], $select)?->id,
+                self::ids(iterator_to_array($users->stream([], ['id' => 'ASC'], $select), preserve_keys: false)),
+            ],
+        );
+    }
+
+    #[Test]
     public function findOneByReturnsFirstMatchInOrder(): void
     {
         $order = $this->em->getRepository(Order::class)->findOneBy(['userId' => 1], ['placedAt' => 'DESC']);
@@ -201,9 +222,42 @@ final class RepositoryTest extends TestCase
     }
 
     #[Test]
+    public function findWithSelectQueriesEvenWhenEntityIsManaged(): void
+    {
+        $users   = $this->em->getRepository(User::class);
+        $managed = $users->find(1);
+        $alice   = $users->createSelect()->where(['users.name' => 'Alice']);
+        $bob     = $users->createSelect()->where(['users.name' => 'Bob']);
+
+        static::assertSame([$managed, null], [$users->find(1, $alice), $users->find(1, $bob)]);
+    }
+
+    #[Test]
+    public function findWithSelectSupportsCompositeKeysOnSchemaQualifiedTables(): void
+    {
+        $memberships = $this->em->getRepository(Membership::class);
+
+        static::assertSame(
+            'owner',
+            $memberships->find(['groupId' => 1, 'userId' => 2], $memberships->createSelect())?->role,
+        );
+    }
+
+    #[Test]
     public function getRepositoryReturnsOneInstancePerClass(): void
     {
         static::assertSame($this->em->getRepository(User::class), $this->em->getRepository(User::class));
+    }
+
+    #[Test]
+    public function givenSelectIsNotModified(): void
+    {
+        $users  = $this->em->getRepository(User::class);
+        $select = $users->createSelect();
+
+        $users->findBy(['name' => 'Alice'], ['id' => 'DESC'], limit: 1, select: $select);
+
+        static::assertCount(3, $users->fetch($select));
     }
 
     #[Test]

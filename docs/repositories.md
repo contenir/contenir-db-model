@@ -16,11 +16,11 @@ $active = $users->findBy(['status' => Status::Active], ['createdAt' => 'DESC'], 
 
 | Method | Returns |
 | --- | --- |
-| `find($id)` | The entity with that primary key, or `null` |
-| `findOneBy(array $criteria, array $orderBy = [])` | The first match, or `null` |
-| `findBy(array $criteria = [], array $orderBy = [], ?int $limit = null, ?int $offset = null)` | `list` of matches; no arguments means every row |
+| `find($id, ?Select $select = null)` | The entity with that primary key, or `null` |
+| `findOneBy(array $criteria, array $orderBy = [], ?Select $select = null)` | The first match, or `null` |
+| `findBy(array $criteria = [], array $orderBy = [], ?int $limit = null, ?int $offset = null, ?Select $select = null)` | `list` of matches; no arguments means every row |
 | `count(array $criteria = [])` | Number of matching rows |
-| `stream(array $criteria = [], array $orderBy = [])` | `Generator` yielding matches one at a time |
+| `stream(array $criteria = [], array $orderBy = [], ?Select $select = null)` | `Generator` yielding matches one at a time |
 | `createSelect()` | A `PhpDb\Sql\Select` over the entity's table, for custom queries |
 | `fetch(Select $select)` / `fetchOne(Select $select)` | Entities from a custom select |
 
@@ -33,7 +33,8 @@ $active = $users->findBy(['status' => Status::Active], ['createdAt' => 'DESC'], 
   exactly the key properties. For example,
   `find(['groupId' => 1, 'userId' => 2])`.
 - **Already loaded:** if the entity is already managed, it is returned
-  **without running a query**.
+  **without running a query**, unless a `$select` is passed (see
+  [finders on a custom select](#finders-on-a-custom-select)).
 - **Bad keys:** a malformed key (a scalar for a composite key, or missing
   or extra properties) throws `QueryException`.
 
@@ -104,6 +105,41 @@ $recent = $users->fetch($select);
 - The select must return the **primary-key columns**, or a
   `HydrationException` is thrown.
 - Extra selected columns that aren't mapped are ignored.
+
+## Finders on a custom select
+
+`find()`, `findOneBy()`, `findBy()` and `stream()` take an optional
+`Select` as the base query. Criteria, ordering, limit and offset are added
+on top of it, so joins and complex predicates combine with property-keyed
+criteria:
+
+```php
+$select = $users->createSelect()
+    ->join('orders', 'orders.user_id = users.id', [])
+    ->where(['orders.status' => 'shipped']);
+
+$users->findBy(['country' => 'AU'], ['name' => 'ASC'], limit: 20, select: $select);
+$users->findOneBy(['email' => $email], select: $select);
+$users->find(42, $select);   // null unless user 42 also has a shipped order
+foreach ($users->stream([], ['id' => 'ASC'], $select) as $user) { /* … */ }
+```
+
+- **The select is cloned.** Your `Select` object is never modified, so it
+  can be reused.
+- **Columns are qualified.** Criteria and ordering columns are qualified
+  with the entity's table (`users.country`), so they stay unambiguous when
+  the select joins tables with columns of the same name. Write your own
+  conditions on the select with qualified column names too.
+- **`find()` always queries when given a select,** even if the entity is
+  already loaded, because the select may add conditions the entity must
+  meet. When the row matches, the managed instance is still the one
+  returned.
+- **Selecting columns.** Start from `createSelect()`, which lists the
+  entity's columns, and pass `[]` as the column list of any join, so
+  joined columns don't replace the entity's. The primary-key columns must
+  stay selected. A join that matches several rows per entity returns that
+  entity several times (the same instance each time); add a
+  `->quantifier('DISTINCT')` or group if that matters.
 
 ## Custom repositories
 

@@ -33,6 +33,9 @@ A ground-up rewrite on `php-db/phpdb`. **Not compatible with 1.x**: see
     `findBy`, `count` and an unbuffered `stream`.
   - `createSelect`, `fetch` and `fetchOne` for custom phpdb selects.
   - Property-keyed, validated criteria.
+  - `find`, `findOneBy`, `findBy` and `stream` accept an optional base
+    `Select` (cloned, with criteria and order columns qualified by table),
+    for joins and complex predicates.
 - **Relations.**
   - Lazy, read-only `Collection` for to-many relations.
   - `LazyRelationsTrait` for to-one relations.
