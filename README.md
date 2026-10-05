@@ -104,6 +104,10 @@ Read in this order:
 Upgrading from 1.x: [UPGRADE-2.0.md](UPGRADE-2.0.md). Changes:
 [CHANGELOG.md](CHANGELOG.md).
 
+Console tools for generating entities from tables, upgrading 1.x
+entities and validating mappings against the schema are in
+[contenir-db-model-tools](https://github.com/contenir/contenir-db-model-tools).
+
 [`llms.txt`](llms.txt) indexes these pages and lists the key rules for LLM
 tooling.
 

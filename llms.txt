@@ -38,6 +38,7 @@ These no longer exist in 2.x. Use the replacement:
 ## Docs
 
 - [Upgrade guide](UPGRADE-2.0.md): every 1.x API mapped to 2.x, plus a checklist
+- [contenir-db-model-tools](https://github.com/contenir/contenir-db-model-tools): `entity:generate` (entities from live tables), `entity:upgrade` (convert 1.x entities in place), `mapping:validate` (check mappings against the schema)
 - [Changelog](CHANGELOG.md)
 
 - [Mapping entities](docs/mapping.md): every attribute and parameter, key defaults, validation rules, and the EntityMetadata API
