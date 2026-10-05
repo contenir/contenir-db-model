@@ -1,0 +1,13 @@
+extends = "vendor/php-db/phpdb-qa-tools/mago.toml"
+php-version = "8.3.0"
+
+[source]
+paths = ["src", "tests"]
+includes = ["vendor"]
+
+[linter.rules]
+# The shared base excludes "test/"; this repository keeps its suites under "tests/".
+too-many-methods = { exclude = ["tests/"] }
+
+[analyzer]
+excludes = ["tests"]

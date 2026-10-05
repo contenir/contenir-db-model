@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Contenir\Db\Model\Exception;
 
-class RuntimeException extends \RuntimeException implements ExceptionInterface
-{
-}
+use RuntimeException as SplRuntimeException;
+
+/**
+ * @api
+ */
+class RuntimeException extends SplRuntimeException implements ExceptionInterface {}

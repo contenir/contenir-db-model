@@ -4,41 +4,29 @@ declare(strict_types=1);
 
 namespace Contenir\Db\Model;
 
-use Laminas\Db\Adapter\Adapter;
-
-class ConfigProvider
+/**
+ * Service wiring for PSR-11 containers via the Laminas component installer
+ * or a Mezzio-style config aggregator.
+ *
+ * @api
+ */
+final readonly class ConfigProvider
 {
     /**
-     * Retrieve default laminas-paginator configuration.
+     * @return array<string, array<string, string>>
+     */
+    public function getDependencies(): array
+    {
+        return [];
+    }
+
+    /**
+     * @return array{dependencies: array<string, array<string, string>>}
      */
     public function __invoke(): array
     {
         return [
-            'dependencies' => $this->getDependencyConfig(),
-            'model'        => $this->getDbModelConfig(),
-        ];
-    }
-
-    /**
-     * Retrieve dependency configuration for laminas-paginator.
-     */
-    public function getDependencyConfig(): array
-    {
-        return [
-            'aliases'   => [],
-            'factories' => [
-                Repository\RepositoryLookup::class => Repository\Factory\RepositoryLookupFactory::class,
-            ],
-        ];
-    }
-
-    /**
-     * Provide default route plugin manager configuration.
-     */
-    public function getDbModelConfig(): array
-    {
-        return [
-            'adapter' => Adapter::class,
+            'dependencies' => $this->getDependencies(),
         ];
     }
 }

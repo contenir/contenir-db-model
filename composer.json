@@ -1,41 +1,33 @@
 {
     "name": "contenir/contenir-db-model",
-    "description": "Contenir Db Model",
+    "description": "Attribute-mapped, typed-property data mapper built on php-db/phpdb",
     "license": "BSD-3-Clause",
+    "type": "library",
     "keywords": [
         "contenir",
-        "laminas",
-        "mvc"
+        "php-db",
+        "data-mapper",
+        "orm",
+        "repository"
     ],
     "homepage": "https://contenir.com.au",
     "support": {
         "docs": "https://docs.contenir.com.au/contenir-db-model/",
-        "issues": "https://contenir.com.au/issues",
+        "issues": "https://github.com/contenir/contenir-db-model/issues",
         "source": "https://github.com/contenir/contenir-db-model"
     },
-    "config": {
-        "sort-packages": true,
-        "allow-plugins": {
-            "dealerdirect/phpcodesniffer-composer-installer": true
-        }
-    },
-    "extra": {
-        "laminas": {
-            "component": "Contenir\\Db\\Model",
-            "config-provider": "Contenir\\Db\\Model\\ConfigProvider"
-        }
-    },
     "require": {
-        "php": "^8.1.0",
-        "contenir/contenir-metadata": "^1.0",
-        "laminas/laminas-db": "^2.20",
-        "laminas/laminas-hydrator": "^4.15",
-        "laminas/laminas-mvc": "^3.0"
+        "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
+        "php-db/phpdb": "0.6.x-dev",
+        "psr/container": "^1.1 || ^2.0"
     },
     "require-dev": {
-        "laminas/laminas-coding-standard": "~3.0.0",
-        "phpunit/phpunit": "^9.3"
+        "php-db/phpdb-qa-tools": "0.1.x-dev",
+        "php-db/phpdb-sqlite": "^0.2.0",
+        "phpunit/phpunit": "^11.5.42"
     },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "autoload": {
         "psr-4": {
             "Contenir\\Db\\Model\\": "src/"
@@ -43,17 +35,38 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "ContenirTest\\Db\\Model\\": "test/"
+            "ContenirTest\\Db\\Model\\": "tests/"
+        }
+    },
+    "config": {
+        "platform": {
+            "php": "8.3.99"
+        },
+        "sort-packages": true
+    },
+    "extra": {
+        "laminas": {
+            "config-provider": "Contenir\\Db\\Model\\ConfigProvider"
         }
     },
     "scripts": {
         "check": [
             "@cs-check",
-            "@test"
+            "@static-analysis",
+            "@test",
+            "@test-integration"
         ],
-        "cs-check": "phpcs",
-        "cs-fix": "phpcbf",
-        "test": "phpunit --colors=always",
-        "test-coverage": "phpunit --colors=always --coverage-clover clover.xml"
+        "cs-check": [
+            "mago format --check",
+            "mago lint"
+        ],
+        "cs-fix": [
+            "mago format",
+            "mago lint --fix"
+        ],
+        "static-analysis": "mago analyze",
+        "test": "phpunit --colors=always --testsuite unit",
+        "test-coverage": "phpunit --colors=always --coverage-clover clover.xml",
+        "test-integration": "phpunit --colors=always --testsuite integration"
     }
 }
