@@ -15,7 +15,9 @@ A ground-up rewrite on `php-db/phpdb`. **Not compatible with 1.x**: see
   `#[HasOne]`, `#[HasMany]`, `#[BelongsTo]` and `#[ManyToMany]` with
   `Via`. Plain entities with typed properties, with mapping validated up
   front by `MappingException`.
-- **`CachedMetadataFactory`.** PSR-16 caching of mapping metadata.
+- **`CachedMetadataFactory`.** PSR-16 caching of mapping metadata. Any
+  `psr/simple-cache` 1.x, 2.x or 3.x implementation works, so it installs
+  alongside laminas-cache 3, which only provides 1.x.
 - **`TypeRegistry`.** Built-in converters for int, float, string, bool,
   datetime, date, json, backed enums and `SensitiveString`, plus custom
   converters.
