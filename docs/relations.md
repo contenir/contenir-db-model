@@ -31,6 +31,54 @@ final class User
 }
 ```
 
+## Ordering by join-table columns
+
+A relation's `orderBy` names columns on the **target** table. When the
+order lives on the link instead, as a `sequence` or `position` column of the
+join table, put it on `Via`:
+
+```php
+#[Table('resource')]
+final class Resource
+{
+    /** @var Collection<Asset> */
+    #[ManyToMany(
+        Asset::class,
+        via: new Via(
+            'lookup_resource_asset',
+            foreignKey: 'resource_id',
+            relatedKey: 'asset_id',
+            orderBy: ['sequence' => 'ASC'],
+        ),
+        orderBy: ['asset_id' => 'ASC'],
+    )]
+    public Collection $images;
+}
+```
+
+```sql
+SELECT asset.…, lookup_resource_asset.resource_id AS __owner_0
+FROM asset
+INNER JOIN lookup_resource_asset ON lookup_resource_asset.asset_id = asset.asset_id
+WHERE lookup_resource_asset.resource_id IN (…)
+ORDER BY lookup_resource_asset.sequence ASC, asset.asset_id ASC
+```
+
+- `Via` ordering comes **first**. The relation's `orderBy` on target
+  columns follows and breaks ties, for example between links with the same
+  `sequence`.
+- Join-table columns are qualified with the join table, so a target that
+  has a column of the same name (here `asset.sequence`) does not clash.
+- Lazy collections and `preload()` use the same order. A preload orders
+  every owner's rows in one query and keeps that order per owner.
+- The direction is case-insensitive and normalised to upper case. Column
+  names must be plain names; see [validation](mapping.md#validation).
+- Where `NULL` sorts depends on the database: first in ascending order on
+  SQLite and MySQL, last on PostgreSQL. Make the column `NOT NULL`, or add
+  a tie-breaker, if that matters.
+- Without `Via` `orderBy`, a many-to-many relation is ordered by its
+  `orderBy` alone, exactly as before.
+
 ## Declaring relation properties
 
 The mapping checks relation properties when metadata is built. A violation
@@ -66,7 +114,7 @@ $user->orders->toArray();    // list<Order>
 - The collection queries **once**, on first use (iteration, `count()`,
   `toArray()`, `first()` or `isEmpty()`), and keeps the result.
 - The relation's `where` criteria and `orderBy` from the mapping are
-  applied.
+  applied, after any [join-table ordering](#ordering-by-join-table-columns).
 - Collections are read-only. `Collection::of([...])` builds an
   already-loaded collection, which you can assign to a new entity before
   saving it; an assigned collection is kept.
@@ -129,7 +177,7 @@ foreach ($list as $user) {
   query.
 - **Every relation kind** works: `HasMany`, `HasOne`, `BelongsTo` and
   `ManyToMany` (via a join on the join table), each with its `where` and
-  `orderBy` mapping criteria.
+  `orderBy` mapping criteria, and `Via` `orderBy` on join-table columns.
 - **Composite keys** work. Single-column keys use `IN (…)`; composite keys
   use `(a = ? AND b = ?) OR …`, which every platform supports.
 - **Owners with a null key** (for example unsaved entities) get an empty
@@ -172,6 +220,6 @@ Cascading saves and deletes across relations are not supported.
 
 | Exception | Raised when |
 | --- | --- |
-| `MappingException` | A relation property has the wrong type or a default value; `preload()` names an undeclared relation |
+| `MappingException` | A relation property has the wrong type or a default value; a `Via` `orderBy` column is not a plain name or has an invalid direction; `preload()` names an undeclared relation |
 | `RelationException` | A non-nullable single relation has no row; the entity is not managed (for example a clone); `preload()` got entities of another class; an undefined property is read through the trait |
 | PHP `Error` ("must not be accessed before initialization") | A single relation is read without the trait and without preloading, or on an unsaved `new` entity |

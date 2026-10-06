@@ -14,6 +14,7 @@ use Contenir\Db\Model\Relation\RelationLoader;
 use Contenir\Db\Model\Relation\RelationResolver;
 use Contenir\Db\Model\Relation\RelationSelect;
 use Contenir\Db\Model\Relation\RowGroupKey;
+use ContenirTest\Db\Model\TestAsset\Entity\Album;
 use ContenirTest\Db\Model\TestAsset\Entity\Membership;
 use ContenirTest\Db\Model\TestAsset\Entity\Order;
 use ContenirTest\Db\Model\TestAsset\Entity\Plain;
@@ -144,6 +145,30 @@ final class LazyLoadingTest extends AbstractRelationTestCase
     public function manyToManyAppliesCriteriaAndOrder(): void
     {
         static::assertSame([2, 1], self::ids($this->user(1)->tags));
+    }
+
+    #[Test]
+    public function manyToManyOrdersByEveryJoinTableColumn(): void
+    {
+        static::assertSame(
+            [2, 1, 3],
+            self::ids($this->em->getRepository(Album::class)->find(1)->photosByPosition ?? []),
+        );
+    }
+
+    #[Test]
+    public function manyToManyOrdersByJoinTableColumnsBeforeTargetColumns(): void
+    {
+        $albums = $this->em->getRepository(Album::class);
+
+        static::assertSame(
+            [[3, 2, 1], [1, 3, 2], []],
+            [
+                self::ids($albums->find(1)->photos ?? []),
+                self::ids($albums->find(2)->photos ?? []),
+                self::ids($albums->find(3)->photos ?? []),
+            ],
+        );
     }
 
     #[Test]

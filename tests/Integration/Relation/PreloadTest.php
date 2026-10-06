@@ -13,6 +13,7 @@ use Contenir\Db\Model\Relation\RelationLoader;
 use Contenir\Db\Model\Relation\RelationSelect;
 use Contenir\Db\Model\Relation\RowGroupKey;
 use Contenir\Db\Model\Repository;
+use ContenirTest\Db\Model\TestAsset\Entity\Album;
 use ContenirTest\Db\Model\TestAsset\Entity\Order;
 use ContenirTest\Db\Model\TestAsset\Entity\Plain;
 use ContenirTest\Db\Model\TestAsset\Entity\User;
@@ -56,6 +57,24 @@ final class PreloadTest extends AbstractRelationTestCase
                 $this->queryCount() - $queries,
                 [self::ids($users[0]->orders), self::ids($users[1]->orders), self::ids($users[2]->orders)],
                 [$users[0]->orders->isLoaded(), $users[1]->orders->isLoaded(), $users[2]->orders->isLoaded()],
+            ],
+        );
+    }
+
+    #[Test]
+    public function loadsManyToManyInJoinTableOrderForAllOwnersInOneQuery(): void
+    {
+        $repository = $this->em->getRepository(Album::class);
+        $albums     = $repository->findBy([], ['id' => 'ASC']);
+        $queries    = $this->queryCount();
+
+        $repository->preload($albums, 'photos');
+
+        static::assertSame(
+            [1, [[3, 2, 1], [1, 3, 2], []]],
+            [
+                $this->queryCount() - $queries,
+                [self::ids($albums[0]->photos), self::ids($albums[1]->photos), self::ids($albums[2]->photos)],
             ],
         );
     }

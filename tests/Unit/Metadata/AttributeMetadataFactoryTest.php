@@ -31,9 +31,11 @@ use Contenir\Db\Model\Metadata\RelationMetadata;
 use Contenir\Db\Model\Metadata\RelationMetadataBuilder;
 use Contenir\Db\Model\Metadata\RelationPropertyValidator;
 use ContenirTest\Db\Model\TestAsset\Entity\Account;
+use ContenirTest\Db\Model\TestAsset\Entity\Album;
 use ContenirTest\Db\Model\TestAsset\Entity\Membership;
 use ContenirTest\Db\Model\TestAsset\Entity\Order;
 use ContenirTest\Db\Model\TestAsset\Entity\OrderStatus;
+use ContenirTest\Db\Model\TestAsset\Entity\Photo;
 use ContenirTest\Db\Model\TestAsset\Entity\Profile;
 use ContenirTest\Db\Model\TestAsset\Entity\Tag;
 use ContenirTest\Db\Model\TestAsset\Entity\User;
@@ -111,6 +113,14 @@ final class AttributeMetadataFactoryTest extends TestCase
             'unknown relation column'    => [Mapping\UnknownRelationColumnEntity::class, 'column "owner_id"'],
             'unknown where column'       => [Mapping\UnknownWhereColumnEntity::class, 'column "archived"'],
             'invalid order direction'    => [Mapping\InvalidOrderDirectionEntity::class, 'must be ASC or DESC'],
+            'join order column'          => [
+                Mapping\InvalidJoinOrderColumnEntity::class,
+                '$tags orders by "entity_tag.sequence" on join table "entity_tag"; it must be a plain column name',
+            ],
+            'join order direction'       => [
+                Mapping\InvalidJoinOrderDirectionEntity::class,
+                '$tags orders by "upwards"; direction must be ASC or DESC',
+            ],
             'collection typed as array'  => [
                 Mapping\CollectionTypedAsArrayEntity::class,
                 '$orders must be typed as Contenir\Db\Model\Collection',
@@ -281,6 +291,35 @@ final class AttributeMetadataFactoryTest extends TestCase
             ),
             $relation,
         );
+    }
+
+    #[Test]
+    public function resolvesManyToManyJoinTableOrderWithNormalisedDirections(): void
+    {
+        $relation = $this->factory->getMetadataFor(Album::class)->getRelation('photos');
+
+        static::assertEquals(
+            new RelationMetadata(
+                'photos',
+                RelationKind::ManyToMany,
+                Photo::class,
+                new RelationKeys(
+                    ['id'],
+                    ['id'],
+                    new JoinTable('album_photo', ['album_id'], ['photo_id'], ['sequence' => 'DESC']),
+                ),
+                new RelationCriteria([], ['caption' => 'DESC']),
+            ),
+            $relation,
+        );
+    }
+
+    #[Test]
+    public function resolvesManyToManyOrderedByEveryJoinTableColumnInDeclaredOrder(): void
+    {
+        $joinTable = $this->factory->getMetadataFor(Album::class)->getRelation('photosByPosition')->keys->joinTable;
+
+        static::assertSame(['sequence' => 'ASC', 'photo_id' => 'DESC'], $joinTable?->orderBy);
     }
 
     #[Test]

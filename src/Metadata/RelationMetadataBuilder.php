@@ -10,6 +10,7 @@ use Contenir\Db\Model\Mapping\HasMany;
 use Contenir\Db\Model\Mapping\HasOne;
 use Contenir\Db\Model\Mapping\ManyToMany;
 use Contenir\Db\Model\Mapping\RelationInterface;
+use Contenir\Db\Model\Mapping\Via;
 use ReflectionAttribute;
 
 use function array_keys;
@@ -66,15 +67,42 @@ final readonly class RelationMetadataBuilder
         );
     }
 
-    private static function joinedKeys(ColumnMapping $owner, ColumnMapping $target, ManyToMany $attribute): RelationKeys
-    {
+    /**
+     * @throws MappingException
+     */
+    private static function joinedKeys(
+        ColumnMapping $owner,
+        ColumnMapping $target,
+        RelationContext $context,
+        ManyToMany $attribute,
+    ): RelationKeys {
         $via = $attribute->via;
 
         return new RelationKeys(
             self::columns($via->localKey) ?? $owner->identifierColumns(),
             self::columns($via->targetKey) ?? $target->identifierColumns(),
-            new JoinTable($via->table, self::columns($via->foreignKey) ?? [], self::columns($via->relatedKey) ?? []),
+            new JoinTable(
+                $via->table,
+                self::columns($via->foreignKey) ?? [],
+                self::columns($via->relatedKey) ?? [],
+                self::joinOrder($context, $via),
+            ),
         );
+    }
+
+    /**
+     * @return array<string, 'ASC'|'DESC'>
+     *
+     * @throws MappingException
+     */
+    private static function joinOrder(RelationContext $context, Via $via): array
+    {
+        $orderBy = [];
+        foreach ($via->orderBy as $column => $direction) {
+            $orderBy[$context->joinColumn($via->table, $column)] = $context->direction($direction);
+        }
+
+        return $orderBy;
     }
 
     private static function owningKeys(ColumnMapping $target, BelongsTo $attribute): RelationKeys
@@ -93,6 +121,7 @@ final readonly class RelationMetadataBuilder
     private static function resolve(
         ColumnMapping $owner,
         ColumnMapping $target,
+        RelationContext $context,
         string $name,
         RelationInterface $attribute,
     ): array {
@@ -102,7 +131,7 @@ final readonly class RelationMetadataBuilder
             $attribute instanceof BelongsTo => [RelationKind::BelongsTo, self::owningKeys($target, $attribute)],
             $attribute instanceof ManyToMany => [
                 RelationKind::ManyToMany,
-                self::joinedKeys($owner, $target, $attribute),
+                self::joinedKeys($owner, $target, $context, $attribute),
             ],
             default => throw MappingException::unsupportedRelation($owner->className, $name, $attribute::class),
         };
@@ -139,10 +168,10 @@ final readonly class RelationMetadataBuilder
      */
     private function relationFor(ColumnMapping $owner, string $name, RelationInterface $attribute): RelationMetadata
     {
-        $target = $this->reader->read($attribute->target());
-        [$kind, $keys] = self::resolve($owner, $target, $name, $attribute);
-
+        $target  = $this->reader->read($attribute->target());
         $context = new RelationContext($owner, $target, $name);
+        [$kind, $keys] = self::resolve($owner, $target, $context, $name, $attribute);
+
         $context->assertPaired($keys->localColumns, $keys->targetColumns);
         if (null !== $keys->joinTable) {
             $context->assertPaired($keys->localColumns, $keys->joinTable->localColumns);

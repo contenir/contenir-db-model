@@ -296,6 +296,7 @@ public Collection $tags;
 | `table.class` = a repository class | The **entity** class |
 | `where` (any predicate) | `where: ['column' => value]`, equality on target columns only |
 | `order` strings | `orderBy: ['column' => 'ASC'|'DESC']`, target column names |
+| `order` strings naming the `via` table (`'lookup.sequence ASC'`) | `new Via(…, orderBy: ['sequence' => 'ASC'])`, join-table column names. Applied before the relation's `orderBy` |
 
 **Access changes:**
 
