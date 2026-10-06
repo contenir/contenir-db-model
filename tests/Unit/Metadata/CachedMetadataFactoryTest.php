@@ -38,7 +38,7 @@ final class CachedMetadataFactoryTest extends TestCase
     public function keyReplacesNamespaceSeparatorsWithDots(): void
     {
         static::assertSame(
-            'contenir.db-model.metadata.v1.ContenirTest.Db.Model.TestAsset.Entity.User',
+            'contenir.db-model.metadata.v2.ContenirTest.Db.Model.TestAsset.Entity.User',
             CachedMetadataFactory::keyFor(User::class),
         );
     }

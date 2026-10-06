@@ -7,6 +7,7 @@ namespace Contenir\Db\Model\Metadata;
 use Contenir\Db\Model\Exception\MappingException;
 
 use function count;
+use function preg_match;
 use function strtoupper;
 
 /**
@@ -72,6 +73,22 @@ final readonly class RelationContext
                 $direction,
             ),
         };
+    }
+
+    /**
+     * Join tables have no entity, so their columns cannot be checked
+     * against a mapping; they must at least be plain, unqualified column
+     * names, as they are qualified with the join table when queried.
+     *
+     * @throws MappingException
+     */
+    public function joinColumn(string $table, string $column): string
+    {
+        if (1 !== preg_match('/\A[A-Za-z_][A-Za-z0-9_]*\z/', $column)) {
+            throw MappingException::invalidJoinColumn($this->owner->className, $this->relation, $table, $column);
+        }
+
+        return $column;
     }
 
     /**

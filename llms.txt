@@ -7,7 +7,7 @@ Key facts for code generation:
 - An entity needs `#[Table('name')]` and at least one `#[Id]`. Only properties with `#[Column]`, `#[Id]` or `#[Version]` are persisted.
 - Column names default to the property name exactly, with no snake_case conversion. Use `#[Column('created_at')]` to map a different column name.
 - Relations: to-many properties are typed `Collection` (lazy, read-only, loads once); to-one properties are typed as the target class (nullable if optional). NO default value on relation properties. To-one lazy loading needs `use LazyRelationsTrait;` on the entity; otherwise preload. Avoid N+1 with `$repo->preload($entities, 'orders.user', 'profile')`. Relations are never written: save the child with its foreign key.
-- Relation keys are column names. `HasOne`/`HasMany` take `foreignKey` (a target column). `BelongsTo` takes `foreignKey` (a column on this entity). `ManyToMany` takes `via: new Via(table, foreignKey:, relatedKey:)`.
+- Relation keys are column names. `HasOne`/`HasMany` take `foreignKey` (a target column). `BelongsTo` takes `foreignKey` (a column on this entity). `ManyToMany` takes `via: new Via(table, foreignKey:, relatedKey:)`; `Via` `orderBy: ['sequence' => 'ASC']` orders by join-table columns, before the relation's own `orderBy` on target columns.
 - `#[Version]` must be a non-nullable `int`. Generated ids and versions cannot be `readonly`.
 - Invalid mappings throw `Contenir\Db\Model\Exception\MappingException` when metadata is first built.
 - Use `CachedMetadataFactory` (PSR-16) in production. Clear its cache on deploy.
