@@ -23,7 +23,7 @@ attributes. There are no base classes and no magic `__get`/`__set`.
 - PHP 8.3, 8.4 or 8.5
 - `php-db/phpdb` 0.6, plus the platform package for your database, such as
   `php-db/phpdb-mysql` or `php-db/phpdb-sqlite`
-- `psr/container`, `psr/simple-cache`
+- `psr/container`, `psr/simple-cache` 1.x, 2.x or 3.x
 
 ## Installation
 
