@@ -88,7 +88,7 @@ final class ColumnMappingReader
                 throw MappingException::duplicateColumn($class->getName(), $field->columnName);
             }
 
-            $columns[$field->columnName]  = true;
+            $columns[$field->columnName]  = $field->propertyName;
             $fields[$field->propertyName] = $field;
         }
 
