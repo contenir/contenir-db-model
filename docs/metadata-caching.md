@@ -28,13 +28,13 @@ values are small and read on every request.
 
 - **Two levels.** Each class is read from the PSR-16 cache at most once per
   `CachedMetadataFactory` instance. After that it is served from memory.
-- **Keys.** Keys are `contenir.db-model.metadata.v1.` plus the class name,
+- **Keys.** Keys are `contenir.db-model.metadata.v2.` plus the class name,
   with `\` replaced by `.`. For example,
-  `contenir.db-model.metadata.v1.App.Entity.User`.
+  `contenir.db-model.metadata.v2.App.Entity.User`.
   `CachedMetadataFactory::keyFor($class)` returns the key for a class.
-- **Versioned prefix.** The `v1` segment changes whenever a release changes
-  the shape of the cached metadata, so entries written by an older release
-  are never read back.
+- **Versioned prefix.** The version segment (currently `v2`) changes
+  whenever a release changes the shape of the cached metadata, so entries
+  written by an older release are never read back.
 - **Best-effort.** A cache read that throws a PSR-16 `CacheException` counts
   as a miss. A failed write is ignored, and the freshly built metadata is
   still returned. An entry that isn't `EntityMetadata` for the requested

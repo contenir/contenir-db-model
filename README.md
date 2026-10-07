@@ -12,7 +12,9 @@ attributes. There are no base classes and no magic `__get`/`__set`.
   optimistic locking and re-entrant transactions.
 - **Repositories** with validated criteria, streaming and custom phpdb
   selects.
-- **Lazy relations,** plus `preload()` to avoid N+1 queries.
+- **Lazy relations,** plus `preload()` to avoid N+1 queries. Many-to-many
+  relations can be ordered by join-table columns, such as a link's
+  `sequence`.
 
 > **Status: 2.0 pre-release.** 2.0 is a rewrite and is not compatible with
 > 1.x. See [UPGRADE-2.0.md](UPGRADE-2.0.md). 1.x remains available from the
@@ -89,7 +91,7 @@ Read in this order:
 4. [Repositories and finders](docs/repositories.md): criteria, streaming,
    custom queries and repositories
 5. [Relations](docs/relations.md): lazy collections, `LazyRelationsTrait`,
-   `preload()`
+   `preload()`, ordering by join-table columns
 6. [Identity map](docs/identity-map.md): one object per row, and memory in
    long-running processes
 7. [Entity lifecycle](docs/entity-lifecycle.md): hydration, refresh and

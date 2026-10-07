@@ -29,6 +29,9 @@ final class Schema
         'accounts',
         'notes',
         'widgets',
+        'albums',
+        'photos',
+        'album_photo',
     ];
 
     /**
@@ -118,6 +121,22 @@ final class Schema
     }
 
     /**
+     * Albums link to photos through album_photo; both photos and the join
+     * table carry a `sequence` column.
+     *
+     * @return list<string>
+     */
+    private static function albums(string $text): array
+    {
+        return [
+            "CREATE TABLE albums (id INTEGER PRIMARY KEY, title {$text} NOT NULL)",
+            "CREATE TABLE photos (id INTEGER PRIMARY KEY, caption {$text} NOT NULL, sequence INTEGER NOT NULL)",
+            'CREATE TABLE album_photo (album_id INTEGER NOT NULL, photo_id INTEGER NOT NULL, sequence INTEGER NOT NULL, '
+                . 'PRIMARY KEY (album_id, photo_id))',
+        ];
+    }
+
+    /**
      * @return list<string>
      */
     private static function drop(Platform $platform): array
@@ -162,6 +181,7 @@ final class Schema
                 . 'username VARCHAR(255) NOT NULL)',
             "CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT NOT NULL, created_at {$timestamp} NOT NULL)",
             "CREATE TABLE widgets (id {$generated}, name VARCHAR(255) NOT NULL, version INTEGER NOT NULL)",
+            ...self::albums('VARCHAR(255)'),
         ];
     }
 
@@ -188,6 +208,7 @@ final class Schema
                 . 'username TEXT NOT NULL)',
             'CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT NOT NULL, created_at TEXT NOT NULL)',
             'CREATE TABLE widgets (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, version INTEGER NOT NULL)',
+            ...self::albums('TEXT'),
         ];
     }
 }

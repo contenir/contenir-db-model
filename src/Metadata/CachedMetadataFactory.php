@@ -32,7 +32,7 @@ final class CachedMetadataFactory implements MetadataFactoryInterface
      * Bumped whenever the serialised shape of {@see EntityMetadata} changes
      * so stale entries written by an older release are never read back.
      */
-    public const string KEY_PREFIX = 'contenir.db-model.metadata.v1.';
+    public const string KEY_PREFIX = 'contenir.db-model.metadata.v2.';
 
     /**
      * @var array<class-string, EntityMetadata<object>>

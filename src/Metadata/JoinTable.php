@@ -12,12 +12,15 @@ namespace Contenir\Db\Model\Metadata;
 final readonly class JoinTable
 {
     /**
-     * @param list<string> $localColumns  join-table columns referencing the owning entity
-     * @param list<string> $targetColumns join-table columns referencing the target entity
+     * @param list<string>                $localColumns  join-table columns referencing the owning entity
+     * @param list<string>                $targetColumns join-table columns referencing the target entity
+     * @param array<string, 'ASC'|'DESC'> $orderBy       join-table column => direction, applied before
+     *                                                   the relation's target ordering
      */
     public function __construct(
         public string $table,
         public array $localColumns,
         public array $targetColumns,
+        public array $orderBy = [],
     ) {}
 }
