@@ -277,6 +277,9 @@ jobs:
                 gh issue edit "$ISSUE" --add-label "auto:implement" > /dev/null
               fi
               ;;
+            reject)
+              gh issue edit "$ISSUE" --add-label "triage:rejected" > /dev/null
+              ;;
             *)
               gh issue edit "$ISSUE" --add-label "triage:$verdict" > /dev/null
               ;;
