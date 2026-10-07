@@ -21,7 +21,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `CachedMetadataFactory` keys no longer contain dots. They are now
   `contenir_db-model_metadata_v2_` plus the md5 of the class name, which
   backends with a strict `key_pattern` (laminas-cache's default) accept.
-  Previously such backends rejected every key, the error was swallowed as a
+  The `v2` prefix is because cached `JoinTable` metadata changed shape:
+  entries cached by rc3 and earlier are ignored and rebuilt. Previously such backends rejected every key, the error was swallowed as a
   miss, and nothing was ever cached. A PSR-16 `InvalidArgumentException`
   from the cache now propagates from reads and writes instead of being
   treated as a miss; other `CacheException`s stay best-effort.
@@ -31,8 +32,6 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Relation `orderBy` docblock types on `HasOne`, `HasMany`, `ManyToMany` and
   `Via` now accept lower-case `'asc'`/`'desc'`, matching the runtime, which
   has always treated directions case-insensitively.
-- `CachedMetadataFactory` keys use the `v2` prefix, as cached `JoinTable` metadata changed
-  shape. Entries cached by rc3 and earlier are ignored and rebuilt.
 
 ## [2.0.0] - Unreleased
 

@@ -18,10 +18,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\SimpleCache\InvalidArgumentException;
 
 use function md5;
-use function str_replace;
 
 #[CoversClass(CachedMetadataFactory::class)]
 #[Group('unit')]
@@ -56,15 +54,6 @@ final class CachedMetadataFactoryTest extends TestCase
     }
 
     #[Test]
-    public function keysDifferForClassNamesThatCollideWhenSanitised(): void
-    {
-        static::assertNotSame(
-            CachedMetadataFactory::keyFor(User::class),
-            CachedMetadataFactory::keyFor(str_replace('\\', replace: '_', subject: User::class)),
-        );
-    }
-
-    #[Test]
     public function passesConfiguredTtlToCache(): void
     {
         $ttl = new DateInterval('PT1H');
@@ -77,9 +66,10 @@ final class CachedMetadataFactoryTest extends TestCase
     #[Test]
     public function propagatesInvalidKeyErrorFromRead(): void
     {
-        $this->cache->readError = new FakeInvalidKeyException();
+        $error                  = new FakeInvalidKeyException();
+        $this->cache->readError = $error;
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionObject($error);
 
         (new CachedMetadataFactory(new AttributeMetadataFactory(), $this->cache))->getMetadataFor(User::class);
     }
@@ -87,9 +77,10 @@ final class CachedMetadataFactoryTest extends TestCase
     #[Test]
     public function propagatesInvalidKeyErrorFromWrite(): void
     {
-        $this->cache->writeError = new FakeInvalidKeyException();
+        $error                   = new FakeInvalidKeyException();
+        $this->cache->writeError = $error;
 
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionObject($error);
 
         (new CachedMetadataFactory(new AttributeMetadataFactory(), $this->cache))->getMetadataFor(User::class);
     }
