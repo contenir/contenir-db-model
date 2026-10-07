@@ -76,13 +76,13 @@ final class ModuleConfigTest extends TestCase
                     'adapter'            => 'db.primary',
                     'metadata_cache'     => 'cache.apcu',
                     'metadata_cache_ttl' => 3600,
-                    'types'              => ['money' => 'converter.money'],
+                    'types'              => ['money' => 'converter.money', 'slug' => 'converter.slug'],
                 ],
             ],
         ]));
 
         static::assertSame(
-            ['db.primary', 'cache.apcu', 3600, ['money' => 'converter.money']],
+            ['db.primary', 'cache.apcu', 3600, ['money' => 'converter.money', 'slug' => 'converter.slug']],
             [$config->adapter, $config->metadataCache, $config->metadataCacheTtl, $config->types],
         );
     }
