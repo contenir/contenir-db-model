@@ -111,6 +111,15 @@ final class AttributeMetadataFactoryTest extends TestCase
             ],
             'join key count mismatch'    => [Mapping\JoinKeyMismatchEntity::class, 'pairs 1 local column(s) [id]'],
             'unknown relation column'    => [Mapping\UnknownRelationColumnEntity::class, 'column "owner_id"'],
+            'join related key mismatch'  => [
+                Mapping\JoinRelatedKeyMismatchEntity::class,
+                'pairs 1 local column(s) [id] with 2 target column(s) [tag_id, region]',
+            ],
+            'unknown order column'       => [Mapping\UnknownOrderColumnEntity::class, 'column "missing"'],
+            'unknown owner column'       => [
+                Mapping\UnknownOwnerColumnEntity::class,
+                'column "missing", which is not mapped on "' . Mapping\UnknownOwnerColumnEntity::class . '"',
+            ],
             'unknown where column'       => [Mapping\UnknownWhereColumnEntity::class, 'column "archived"'],
             'invalid order direction'    => [Mapping\InvalidOrderDirectionEntity::class, 'must be ASC or DESC'],
             'join order column'          => [
@@ -261,6 +270,20 @@ final class AttributeMetadataFactoryTest extends TestCase
     }
 
     #[Test]
+    public function resolvesExplicitKeysAheadOfIdentifierDefaults(): void
+    {
+        $metadata = $this->factory->getMetadataFor(Mapping\ExplicitKeysEntity::class);
+
+        static::assertEquals(
+            [
+                new RelationKeys(['user_email'], ['email']),
+                new RelationKeys(['code'], ['name'], new JoinTable('explicit_tag', ['entity_code'], ['tag_name'])),
+            ],
+            [$metadata->getRelation('user')->keys, $metadata->getRelation('tags')->keys],
+        );
+    }
+
+    #[Test]
     public function resolvesHasManyWithDefaultLocalKeyAndNormalisedOrder(): void
     {
         $relation = $this->factory->getMetadataFor(User::class)->getRelation('orders');
@@ -291,6 +314,14 @@ final class AttributeMetadataFactoryTest extends TestCase
             ),
             $relation,
         );
+    }
+
+    #[Test]
+    public function resolvesKeysDeclaredWithNonListKeysToLists(): void
+    {
+        $keys = $this->factory->getMetadataFor(Mapping\NonListKeysEntity::class)->getRelation('orders')->keys;
+
+        static::assertEquals(new RelationKeys(['id'], ['user_id']), $keys);
     }
 
     #[Test]

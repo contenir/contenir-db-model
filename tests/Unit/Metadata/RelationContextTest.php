@@ -84,6 +84,15 @@ final class RelationContextTest extends TestCase
         $this->context->joinColumn('user_tag', $column);
     }
 
+    #[Test]
+    public function rejectsOwnerColumnsThatAreNotMapped(): void
+    {
+        $this->expectException(MappingException::class);
+        $this->expectExceptionMessage('references column "missing", which is not mapped on "' . User::class . '"');
+
+        $this->context->assertOwnerColumns(['missing']);
+    }
+
     protected function setUp(): void
     {
         $this->context = new RelationContext(
