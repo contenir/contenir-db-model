@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ContenirTest\Db\Model\Integration\Relation;
 
 use Contenir\Db\Model\Collection;
+use Contenir\Db\Model\EntityManager;
 use Contenir\Db\Model\Exception\RelationException;
 use Contenir\Db\Model\Persistence\EntityPersister;
 use Contenir\Db\Model\Persistence\EntityRefresher;
@@ -31,6 +32,7 @@ use PHPUnit\Framework\Attributes\Test;
 
 use function count;
 
+#[CoversClass(EntityManager::class)]
 #[CoversClass(EntityPersister::class)]
 #[CoversClass(EntityRefresher::class)]
 #[CoversClass(RelationInitializer::class)]
