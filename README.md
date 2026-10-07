@@ -1,5 +1,8 @@
 # contenir-db-model
 
+[![Continuous Integration](https://github.com/contenir/contenir-db-model/actions/workflows/continuous-integration.yml/badge.svg)](https://github.com/contenir/contenir-db-model/actions/workflows/continuous-integration.yml)
+[![codecov](https://codecov.io/gh/contenir/contenir-db-model/graph/badge.svg)](https://codecov.io/gh/contenir/contenir-db-model)
+
 A small data mapper for [php-db/phpdb](https://github.com/php-db/phpdb).
 Entities are plain PHP classes with typed properties, described by
 attributes. There are no base classes and no magic `__get`/`__set`.
