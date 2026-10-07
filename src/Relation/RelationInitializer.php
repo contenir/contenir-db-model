@@ -27,11 +27,6 @@ final class RelationInitializer
 {
     private ?RelationLoader $loader = null;
 
-    /**
-     * @var array<class-string, RelationBinding>
-     */
-    private array $bindings = [];
-
     public function __construct(
         private readonly PropertyAccessor $accessor,
     ) {}
@@ -71,19 +66,17 @@ final class RelationInitializer
      */
     public function initialize(EntityMetadata $metadata, object $entity): void
     {
-        if ([] === $metadata->relations) {
-            return;
-        }
+        if ([] !== $metadata->relations) {
+            foreach ($metadata->relations as $relation) {
+                if ($this->accessor->isInitialized($entity, $relation->name)) {
+                    continue;
+                }
 
-        foreach ($metadata->relations as $relation) {
-            if ($this->accessor->isInitialized($entity, $relation->name)) {
-                continue;
+                $this->prepare($metadata, $relation, $entity);
             }
 
-            $this->prepare($metadata, $relation, $entity);
+            RelationResolver::register($entity, new RelationBinding($this, $metadata));
         }
-
-        RelationResolver::register($entity, $this->binding($metadata));
     }
 
     /**
@@ -123,14 +116,6 @@ final class RelationInitializer
         $this->accessor->set($entity, $name, $value);
 
         return $value;
-    }
-
-    /**
-     * @param EntityMetadata<object> $metadata
-     */
-    private function binding(EntityMetadata $metadata): RelationBinding
-    {
-        return $this->bindings[$metadata->className] ??= new RelationBinding($this, $metadata);
     }
 
     /**
