@@ -11,7 +11,11 @@ jobs:
     with:
       php-versions: '["8.3", "8.4", "8.5"]'
       run-integration: true
+      enable-codecov: true
       coverage-php-version: "8.4"
+      enable-infection: true
+      min-msi: "90"
+      min-covered-msi: "90"
 
   integration-databases:
     name: "Integration (${{ matrix.db }} | PHP ${{ matrix.php }})"
