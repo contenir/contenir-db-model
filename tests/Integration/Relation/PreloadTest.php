@@ -19,6 +19,7 @@ use ContenirTest\Db\Model\TestAsset\Entity\Plain;
 use ContenirTest\Db\Model\TestAsset\Entity\User;
 use ContenirTest\Db\Model\TestAsset\Factory\EntityFactory;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -33,6 +34,27 @@ use PHPUnit\Framework\Attributes\Test;
 #[Group('integration')]
 final class PreloadTest extends AbstractRelationTestCase
 {
+    /**
+     * @return iterable<string, array{list<string>}>
+     */
+    public static function siblingPathsSharingAPrefix(): iterable
+    {
+        yield 'siblings first' => [['orders.user.profile', 'orders.user.tags', 'orders.user']];
+        yield 'siblings only' => [['orders.user.profile', 'orders.user.tags']];
+        yield 'prefix first' => [['orders.user', 'orders.user.profile', 'orders.user.tags']];
+    }
+
+    #[Test]
+    public function doesNotWalkNestedPathsWhenNothingWasLoaded(): void
+    {
+        $withoutOrders = [$this->users()[2]];
+        $queries       = $this->queryCount();
+
+        $this->em->getRepository(User::class)->preload($withoutOrders, 'orders.invoices');
+
+        static::assertSame(1, $this->queryCount() - $queries);
+    }
+
     #[Test]
     public function fillsSingleRelationOnEntitiesWithoutTheTrait(): void
     {
@@ -41,6 +63,21 @@ final class PreloadTest extends AbstractRelationTestCase
         $this->em->getRepository(Plain::class)->preload($plain, 'user');
 
         static::assertSame('Alice', $plain[0]->user->name);
+    }
+
+    /**
+     * @param list<string> $paths
+     */
+    #[Test]
+    #[DataProvider('siblingPathsSharingAPrefix')]
+    public function loadsEverySiblingOfARepeatedPrefix(array $paths): void
+    {
+        $users   = $this->users();
+        $queries = $this->queryCount();
+
+        $this->em->getRepository(User::class)->preload($users, ...$paths);
+
+        static::assertSame(4, $this->queryCount() - $queries);
     }
 
     #[Test]
