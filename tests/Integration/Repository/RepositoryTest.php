@@ -104,6 +104,15 @@ final class RepositoryTest extends TestCase
     }
 
     #[Test]
+    public function fetchOneLimitsTheQueryToOneRow(): void
+    {
+        $users  = $this->em->getRepository(User::class);
+        $select = $users->createSelect()->order('id ASC');
+
+        static::assertSame([1, 1], [$users->fetchOne($select)?->id, $select->getRawState(Select::LIMIT)]);
+    }
+
+    #[Test]
     public function fetchOneRunsCustomSelect(): void
     {
         $users  = $this->em->getRepository(User::class);
@@ -134,6 +143,20 @@ final class RepositoryTest extends TestCase
         $users = $this->em->getRepository(User::class)->findBy([], ['id' => 'ASC'], limit: 1, offset: 1);
 
         static::assertSame([2], self::ids($users));
+    }
+
+    #[Test]
+    public function findByCombinesEveryCriterion(): void
+    {
+        $users = $this->em->getRepository(User::class);
+
+        static::assertSame(
+            [[], [3]],
+            [
+                self::ids($users->findBy(['name' => 'Alice', 'email' => 'c@example.com'])),
+                self::ids($users->findBy(['name' => 'Cara', 'email' => 'c@example.com'])),
+            ],
+        );
     }
 
     #[Test]
