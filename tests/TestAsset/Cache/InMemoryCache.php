@@ -7,6 +7,7 @@ namespace ContenirTest\Db\Model\TestAsset\Cache;
 use DateInterval;
 use Override;
 use Psr\SimpleCache\CacheInterface;
+use Throwable;
 
 use function array_key_exists;
 use function is_int;
@@ -33,9 +34,9 @@ final class InMemoryCache implements CacheInterface
 
     public int|DateInterval|null $lastTtl = null;
 
-    public bool $failReads = false;
+    public ?Throwable $readError = null;
 
-    public bool $failWrites = false;
+    public ?Throwable $writeError = null;
 
     private static function key(mixed $key): string
     {
@@ -100,8 +101,8 @@ final class InMemoryCache implements CacheInterface
     {
         $key = self::key($key);
         ++$this->reads;
-        if ($this->failReads) {
-            throw new FakeCacheException('read failed');
+        if ($this->readError instanceof Throwable) {
+            throw $this->readError;
         }
 
         return array_key_exists($key, $this->values) ? unserialize($this->values[$key]) : $default;
@@ -129,8 +130,8 @@ final class InMemoryCache implements CacheInterface
     {
         $key = self::key($key);
         $ttl = self::ttl($ttl);
-        if ($this->failWrites) {
-            throw new FakeCacheException('write failed');
+        if ($this->writeError instanceof Throwable) {
+            throw $this->writeError;
         }
 
         $this->values[$key] = serialize($value);

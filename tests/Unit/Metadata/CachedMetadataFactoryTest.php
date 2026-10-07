@@ -7,6 +7,8 @@ namespace ContenirTest\Db\Model\Unit\Metadata;
 use Contenir\Db\Model\Metadata\AttributeMetadataFactory;
 use Contenir\Db\Model\Metadata\CachedMetadataFactory;
 use Contenir\Db\Model\Metadata\MetadataFactoryInterface;
+use ContenirTest\Db\Model\TestAsset\Cache\FakeCacheException;
+use ContenirTest\Db\Model\TestAsset\Cache\FakeInvalidKeyException;
 use ContenirTest\Db\Model\TestAsset\Cache\InMemoryCache;
 use ContenirTest\Db\Model\TestAsset\Entity\Order;
 use ContenirTest\Db\Model\TestAsset\Entity\User;
@@ -16,6 +18,10 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\SimpleCache\InvalidArgumentException;
+
+use function md5;
+use function str_replace;
 
 #[CoversClass(CachedMetadataFactory::class)]
 #[Group('unit')]
@@ -35,11 +41,26 @@ final class CachedMetadataFactoryTest extends TestCase
     }
 
     #[Test]
-    public function keyReplacesNamespaceSeparatorsWithDots(): void
+    public function keyContainsOnlyCharactersAcceptedByStrictBackends(): void
+    {
+        static::assertMatchesRegularExpression('/^[A-Za-z0-9_-]+$/', CachedMetadataFactory::keyFor(User::class));
+    }
+
+    #[Test]
+    public function keyIsPrefixPlusMd5OfClassName(): void
     {
         static::assertSame(
-            'contenir.db-model.metadata.v2.ContenirTest.Db.Model.TestAsset.Entity.User',
+            'contenir_db-model_metadata_v2_' . md5(User::class),
             CachedMetadataFactory::keyFor(User::class),
+        );
+    }
+
+    #[Test]
+    public function keysDifferForClassNamesThatCollideWhenSanitised(): void
+    {
+        static::assertNotSame(
+            CachedMetadataFactory::keyFor(User::class),
+            CachedMetadataFactory::keyFor(str_replace('\\', replace: '_', subject: User::class)),
         );
     }
 
@@ -51,6 +72,26 @@ final class CachedMetadataFactoryTest extends TestCase
         (new CachedMetadataFactory(new AttributeMetadataFactory(), $this->cache, $ttl))->getMetadataFor(User::class);
 
         static::assertSame($ttl, $this->cache->lastTtl);
+    }
+
+    #[Test]
+    public function propagatesInvalidKeyErrorFromRead(): void
+    {
+        $this->cache->readError = new FakeInvalidKeyException();
+
+        $this->expectException(InvalidArgumentException::class);
+
+        (new CachedMetadataFactory(new AttributeMetadataFactory(), $this->cache))->getMetadataFor(User::class);
+    }
+
+    #[Test]
+    public function propagatesInvalidKeyErrorFromWrite(): void
+    {
+        $this->cache->writeError = new FakeInvalidKeyException();
+
+        $this->expectException(InvalidArgumentException::class);
+
+        (new CachedMetadataFactory(new AttributeMetadataFactory(), $this->cache))->getMetadataFor(User::class);
     }
 
     #[Test]
@@ -78,7 +119,7 @@ final class CachedMetadataFactoryTest extends TestCase
     #[Test]
     public function returnsBuiltMetadataWhenWriteFails(): void
     {
-        $this->cache->failWrites = true;
+        $this->cache->writeError = new FakeCacheException();
 
         $metadata = (new CachedMetadataFactory(new AttributeMetadataFactory(), $this->cache))->getMetadataFor(
             User::class,
@@ -116,7 +157,7 @@ final class CachedMetadataFactoryTest extends TestCase
     #[Test]
     public function treatsFailingReadAsMiss(): void
     {
-        $this->cache->failReads = true;
+        $this->cache->readError = new FakeCacheException();
 
         $metadata = (new CachedMetadataFactory(new AttributeMetadataFactory(), $this->cache))->getMetadataFor(
             User::class,
