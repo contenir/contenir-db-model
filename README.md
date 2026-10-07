@@ -149,7 +149,7 @@ crashes on long runs. Pass `-- --clover clover.xml` or
 `-- --html build/coverage` for report files.
 
 QA configuration comes from
-[php-db/phpdb-qa-tools](https://github.com/php-db/phpdb-qa-tools).
+[contenir/contenir-qa-tools](https://github.com/contenir/contenir-qa-tools).
 
 ## License
 
