@@ -6,6 +6,8 @@ namespace ContenirTest\Db\Model\Integration\Relation;
 
 use Contenir\Db\Model\Collection;
 use Contenir\Db\Model\Exception\RelationException;
+use Contenir\Db\Model\Persistence\EntityPersister;
+use Contenir\Db\Model\Persistence\EntityRefresher;
 use Contenir\Db\Model\Relation\LazyRelationsTrait;
 use Contenir\Db\Model\Relation\OwnerPredicate;
 use Contenir\Db\Model\Relation\RelationBinding;
@@ -29,6 +31,8 @@ use PHPUnit\Framework\Attributes\Test;
 
 use function count;
 
+#[CoversClass(EntityPersister::class)]
+#[CoversClass(EntityRefresher::class)]
 #[CoversClass(RelationInitializer::class)]
 #[CoversClass(RelationLoader::class)]
 #[CoversClass(RelationSelect::class)]
