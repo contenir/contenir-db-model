@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ContenirTest\Db\Model\Unit\Identity;
 
+use Contenir\Db\Model\Collection;
 use Contenir\Db\Model\Hydrator\ChangeTracker;
 use Contenir\Db\Model\Hydrator\EntityHydrator;
 use Contenir\Db\Model\Hydrator\PropertyAccessor;
@@ -48,6 +49,14 @@ final class EntityLoaderTest extends TestCase
         $this->loader->load($this->metadata, ['id' => 1, 'email' => 'stored@example.com']);
 
         static::assertSame(['email' => 'edited@example.com'], $this->tracker->changes($this->metadata, $user));
+    }
+
+    #[Test]
+    public function preparesRelationPropertiesOnNewlyLoadedEntity(): void
+    {
+        $user = $this->loader->load($this->metadata, ['id' => 1, 'email' => 'a@example.com']);
+
+        static::assertInstanceOf(Collection::class, $user->orders);
     }
 
     #[Test]
