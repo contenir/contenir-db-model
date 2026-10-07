@@ -18,9 +18,9 @@ use Override;
 final readonly class ManyToMany implements RelationInterface
 {
     /**
-     * @param class-string                $target
+     * @param class-string                             $target
      * @param array<string, 'ASC'|'DESC'|'asc'|'desc'> $orderBy
-     * @param array<string, scalar|null>  $where
+     * @param array<string, scalar|null>               $where
      */
     public function __construct(
         public string $target,

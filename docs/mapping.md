@@ -145,8 +145,8 @@ and target key lists must have the same length and are paired by position.
 - `relatedKey`: the join-table column(s) referencing the target's `targetKey`
   [the target's primary key].
 - `orderBy`: `['column' => 'ASC'|'DESC']` on the **join table**, such as a
-  position stored on the link. The direction is case-insensitive. It is applied before the relation's own
-  `orderBy`, which then breaks ties. See
+  position stored on the link. The direction is case-insensitive. It is
+  applied before the relation's own `orderBy`, which then breaks ties. See
   [relations](relations.md#ordering-by-join-table-columns).
 
 ### Fixed criteria
