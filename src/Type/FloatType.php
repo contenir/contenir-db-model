@@ -8,8 +8,6 @@ use Contenir\Db\Model\Exception\TypeConversionException;
 use Contenir\Db\Model\Metadata\FieldMetadata;
 use Override;
 
-use function is_float;
-use function is_int;
 use function is_numeric;
 
 /**
@@ -34,7 +32,7 @@ final readonly class FloatType implements TypeConverterInterface
      */
     private function convert(mixed $value, FieldMetadata $field): float
     {
-        if (is_float($value) || is_int($value) || is_numeric($value)) {
+        if (is_numeric($value)) {
             return (float) $value;
         }
 

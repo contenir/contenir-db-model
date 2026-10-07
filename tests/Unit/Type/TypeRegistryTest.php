@@ -55,6 +55,17 @@ final class TypeRegistryTest extends TestCase
     }
 
     /**
+     * @return array<string, array{class-string}>
+     */
+    public static function implicitlyConvertedClassProvider(): array
+    {
+        return [
+            'backed enum'       => [OrderStatus::class],
+            'DateTimeImmutable' => [DateTimeImmutable::class],
+        ];
+    }
+
+    /**
      * @return array<string, array{FieldMetadata, string}>
      */
     public static function unresolvableProvider(): array
@@ -88,6 +99,19 @@ final class TypeRegistryTest extends TestCase
             FieldFactory::make(OrderStatus::class),
             'shipped',
         ));
+    }
+
+    /**
+     * @param class-string $className
+     */
+    #[DataProvider('implicitlyConvertedClassProvider')]
+    #[Test]
+    public function registeredClassConverterWinsOverImplicitOne(string $className): void
+    {
+        $converter = $this->createStub(TypeConverterInterface::class);
+        $registry  = TypeRegistry::withDefaults()->withConverter($className, $converter);
+
+        static::assertSame($converter, $registry->converterFor(FieldFactory::make($className)));
     }
 
     #[DataProvider('unresolvableProvider')]

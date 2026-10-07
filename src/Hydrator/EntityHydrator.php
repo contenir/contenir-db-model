@@ -134,15 +134,15 @@ final readonly class EntityHydrator
     private function refreshField(string $className, object $entity, FieldMetadata $field, mixed $raw): void
     {
         $name = $field->propertyName;
-        if (! $field->readonly || ! $this->accessor->isInitialized($entity, $name)) {
-            $this->accessor->set($entity, $name, $this->types->toPhp($field, $raw));
+        if ($field->readonly && $this->accessor->isInitialized($entity, $name)) {
+            $stored = $this->types->toDatabase($field, $this->types->toPhp($field, $raw));
+            if ($this->types->toDatabase($field, $this->accessor->get($entity, $name)) !== $stored) {
+                throw HydrationException::readonlyChanged($className, $name);
+            }
 
             return;
         }
 
-        $stored = $this->types->toDatabase($field, $this->types->toPhp($field, $raw));
-        if ($this->types->toDatabase($field, $this->accessor->get($entity, $name)) !== $stored) {
-            throw HydrationException::readonlyChanged($className, $name);
-        }
+        $this->accessor->set($entity, $name, $this->types->toPhp($field, $raw));
     }
 }
