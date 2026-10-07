@@ -1,0 +1,35 @@
+name: "Auto-dev"
+
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [opened, labeled]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+
+jobs:
+  auto-dev:
+    uses: ./.github/workflows/auto-dev-pipeline.yml
+    secrets: inherit
+    with:
+      reviewers: simon-mundy
+      php-version: "8.3"
+      php-extensions: pdo_sqlite
+      check-command: composer check
+      guidance: |
+        Conventions for contenir-db-model 2.x:
+        - PHP ~8.3 || ~8.4 || ~8.5. Every concrete class is final; extension points are interfaces or abstract classes.
+        - Import functions and constants with `use function` / `use const`. No `@` error suppression.
+        - Tooling is Mago (format, lint, analyze), not phpcs or psalm. `composer cs-fix` formats.
+        - Tests: tests/Unit (no I/O, collaborators doubled) and tests/Integration (real SQLite by default), fakes and factories in tests/TestAsset, shared setup in tests/Trait (`*Trait` suffix). Use `#[Test]`, a `#[Group]` matching the suite, `static::assert*`, data providers instead of loops, and behaviour-describing names.
+        - Integration tests must pass on SQLite, MySQL and PostgreSQL; CI runs all three, so avoid dialect-specific SQL.
+        - Keep line and branch coverage at 100%.
+        - CHANGELOG.md follows Keep a Changelog; add entries under the unreleased version.
