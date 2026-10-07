@@ -28,6 +28,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function array_column;
 use function str_contains;
 
 #[CoversClass(EntityManager::class)]
@@ -198,6 +199,37 @@ final class SaveTest extends TestCase
     }
 
     #[Test]
+    public function updateOfUnversionedEntityTouchesOnlyItsOwnRow(): void
+    {
+        $first  = EntityFactory::tag('first');
+        $second = EntityFactory::tag('second');
+        $this->em->save($first);
+        $this->em->save($second);
+        $first->name = 'renamed';
+
+        $this->em->save($first);
+
+        static::assertSame(
+            ['renamed', 'second'],
+            array_column($this->fetchAll('SELECT name FROM tags ORDER BY id'), 'name'),
+        );
+    }
+
+    #[Test]
+    public function updateResnapshotsEntityAgainstWhatWasWritten(): void
+    {
+        $tag = EntityFactory::tag('before');
+        $this->em->save($tag);
+        $tag->name = 'after';
+        $this->em->save($tag);
+        $this->pdo->exec("UPDATE tags SET name = 'external'");
+
+        $this->em->save($tag);
+
+        static::assertSame([['name' => 'external']], $this->fetchAll('SELECT name FROM tags'));
+    }
+
+    #[Test]
     public function updateThatClearsPrimaryKeyIsRejectedBeforeAnySql(): void
     {
         $user = EntityFactory::user();
@@ -229,6 +261,23 @@ final class SaveTest extends TestCase
         static::assertSame(
             [['email' => 'b@example.com', 'name' => 'changed elsewhere']],
             $this->fetchAll('SELECT email, name FROM users'),
+        );
+    }
+
+    #[Test]
+    public function versionedUpdateIsGuardedByKeyAndVersion(): void
+    {
+        $first  = EntityFactory::widget('first');
+        $second = EntityFactory::widget('second');
+        $this->em->save($first);
+        $this->em->save($second);
+        $first->name = 'renamed';
+
+        $this->em->save($first);
+
+        static::assertSame(
+            [['name' => 'renamed', 'version' => 2], ['name' => 'second', 'version' => 1]],
+            $this->fetchAll('SELECT name, version FROM widgets ORDER BY id'),
         );
     }
 

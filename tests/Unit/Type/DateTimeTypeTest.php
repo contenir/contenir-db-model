@@ -105,6 +105,14 @@ final class DateTimeTypeTest extends TestCase
     }
 
     #[Test]
+    public function parsesWithConfiguredFormatRatherThanGeneralParser(): void
+    {
+        $value = (new DateTimeType('d/m/Y'))->toPhp('04/03/2024', FieldFactory::make(DateTimeImmutable::class));
+
+        static::assertSame('2024-03-04', $value->format('Y-m-d'));
+    }
+
+    #[Test]
     public function rejectsNonDateForDatabase(): void
     {
         $this->expectException(TypeConversionException::class);
@@ -124,10 +132,21 @@ final class DateTimeTypeTest extends TestCase
     }
 
     #[Test]
+    public function returnsImmutableDateTimeForImmutableProperties(): void
+    {
+        $value = (new DateTimeType())->toPhp('2024-03-04 05:06:07', FieldFactory::make(DateTimeImmutable::class));
+
+        static::assertInstanceOf(DateTimeImmutable::class, $value);
+    }
+
+    #[Test]
     public function returnsMutableDateTimeForMutableProperties(): void
     {
         $value = (new DateTimeType())->toPhp('2024-03-04 05:06:07', FieldFactory::make(DateTime::class));
 
-        static::assertEquals(new DateTime('2024-03-04 05:06:07'), $value);
+        static::assertSame(
+            [true, '2024-03-04 05:06:07'],
+            [$value instanceof DateTime, $value->format('Y-m-d H:i:s')],
+        );
     }
 }

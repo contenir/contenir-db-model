@@ -92,13 +92,13 @@ final class ChangeTracker
      */
     public function restore(object $entity, ?array $snapshot): void
     {
-        if (null === $snapshot) {
-            $this->forget($entity);
+        if (null !== $snapshot) {
+            $this->snapshots[$entity] = $snapshot;
 
             return;
         }
 
-        $this->snapshots[$entity] = $snapshot;
+        $this->forget($entity);
     }
 
     /**
