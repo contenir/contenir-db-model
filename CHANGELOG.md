@@ -21,11 +21,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `CachedMetadataFactory` keys no longer contain dots. They are now
   `contenir_db-model_metadata_v2_` plus the md5 of the class name, which
   backends with a strict `key_pattern` (laminas-cache's default) accept.
-  The `v2` prefix is because cached `JoinTable` metadata changed shape:
-  entries cached by rc3 and earlier are ignored and rebuilt. Previously such backends rejected every key, the error was swallowed as a
-  miss, and nothing was ever cached. A PSR-16 `InvalidArgumentException`
+  Previously such backends rejected every key, the error was swallowed as
+  a miss, and nothing was ever cached. A PSR-16 `InvalidArgumentException`
   from the cache now propagates from reads and writes instead of being
-  treated as a miss; other `CacheException`s stay best-effort.
+  treated as a miss; other `CacheException`s stay best-effort. The `v2`
+  prefix reflects the `JoinTable` metadata shape change, so entries cached
+  by rc3 and earlier are ignored and rebuilt.
 
 ### Changed
 
