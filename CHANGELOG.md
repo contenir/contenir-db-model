@@ -18,6 +18,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Relation `orderBy` docblock types on `HasOne`, `HasMany`, `ManyToMany` and
+  `Via` now accept lower-case `'asc'`/`'desc'`, matching the runtime, which
+  has always treated directions case-insensitively.
 - `CachedMetadataFactory` keys use the prefix
   `contenir.db-model.metadata.v2.`, as cached `JoinTable` metadata changed
   shape. Entries cached by rc3 and earlier are ignored and rebuilt.

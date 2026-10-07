@@ -12,7 +12,7 @@ namespace Contenir\Db\Model\Mapping;
 interface RelationInterface
 {
     /**
-     * @return array<string, 'ASC'|'DESC'>
+     * @return array<string, 'ASC'|'DESC'|'asc'|'desc'>
      */
     public function orderBy(): array;
 
