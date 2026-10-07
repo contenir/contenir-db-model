@@ -115,14 +115,7 @@ final class CachedMetadataFactory implements MetadataFactoryInterface
     private function build(string $key, string $className): EntityMetadata
     {
         $metadata = $this->inner->getMetadataFor($className);
-
-        try {
-            $this->cache->set($key, $metadata, $this->ttl);
-        } catch (InvalidArgumentException $e) {
-            throw $e;
-        } catch (CacheException) {
-            return $metadata;
-        }
+        $this->store($key, $metadata);
 
         return $metadata;
     }
@@ -144,6 +137,26 @@ final class CachedMetadataFactory implements MetadataFactoryInterface
             throw $e;
         } catch (CacheException) {
             return null;
+        }
+    }
+
+    /**
+     * Best-effort write: a failing backend leaves the entry uncached.
+     *
+     * @param EntityMetadata<object> $metadata
+     *
+     * @throws InvalidArgumentException
+     *
+     * @mago-expect lint:no-empty-catch-clause The cache is best-effort; a failed write only means a rebuild next time.
+     */
+    private function store(string $key, EntityMetadata $metadata): void
+    {
+        try {
+            $this->cache->set($key, $metadata, $this->ttl);
+        } catch (InvalidArgumentException $e) {
+            throw $e;
+        } catch (CacheException) {
+            // The entry stays uncached; the built metadata is still returned.
         }
     }
 }
