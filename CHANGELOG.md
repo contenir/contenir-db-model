@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.0.0-rc4] - Unreleased
+
+### Added
+
+- **Ordering many-to-many relations by join-table columns.** `Via` takes an
+  `orderBy` of join-table column => `ASC`/`DESC`, such as a link's
+  `sequence`, applied before the relation's own `orderBy` on target columns
+  for lazy collections and `preload()` alike. Columns must be plain names
+  and directions `ASC` or `DESC`, checked by `MappingException`. 1.x
+  `order` strings naming the `via` table map to this. `JoinTable` gains a
+  matching `orderBy`. Relations without it are unchanged.
+
+### Changed
+
+- `CachedMetadataFactory` keys use the prefix
+  `contenir.db-model.metadata.v2.`, as cached `JoinTable` metadata changed
+  shape. Entries cached by rc3 and earlier are ignored and rebuilt.
+
 ## [2.0.0] - Unreleased
 
 A ground-up rewrite on `php-db/phpdb`. **Not compatible with 1.x**: see
@@ -71,4 +89,5 @@ A ground-up rewrite on `php-db/phpdb`. **Not compatible with 1.x**: see
 
 See the `v1.0.*` tags.
 
+[2.0.0-rc4]: https://github.com/contenir/contenir-db-model/compare/v2.0.0-rc3...main
 [2.0.0]: https://github.com/contenir/contenir-db-model/compare/v1.0.4.4...v2

@@ -137,13 +137,17 @@ and target key lists must have the same length and are paired by position.
 | `#[BelongsTo(Target::class, foreignKey:, ownerKey:)]` | This entity holds a foreign key to one target row | `foreignKey` is on this table. `ownerKey` is on the target table [the target's primary key]. |
 | `#[ManyToMany(Target::class, via: new Via(...), orderBy:, where:)]` | Rows linked through a join table | See `Via` below. |
 
-### `new Via(table, foreignKey:, relatedKey:, localKey: null, targetKey: null)`
+### `new Via(table, foreignKey:, relatedKey:, localKey: null, targetKey: null, orderBy: [])`
 
 - `table`: the join table.
 - `foreignKey`: the join-table column(s) referencing this entity's `localKey`
   [this entity's primary key].
 - `relatedKey`: the join-table column(s) referencing the target's `targetKey`
   [the target's primary key].
+- `orderBy`: `['column' => 'ASC'|'DESC']` on the **join table**, such as a
+  position stored on the link. It is applied before the relation's own
+  `orderBy`, which then breaks ties. See
+  [relations](relations.md#ordering-by-join-table-columns).
 
 ### Fixed criteria
 
@@ -179,10 +183,16 @@ class and property. The following are rejected:
   columns;
 - relation keys, `where` columns or `orderBy` columns that are not mapped on
   the entity they refer to;
-- an `orderBy` direction other than `ASC` or `DESC`;
+- an `orderBy` direction other than `ASC` or `DESC`, on the relation or on
+  `Via`;
+- a `Via` `orderBy` column that is not a plain column name (letters, digits
+  and underscores, not starting with a digit), such as `'user_tag.sequence'`
+  or `'sequence DESC'`;
 - a relation attribute the factory doesn't recognise.
 
-Join-table columns are not checked, because the join table has no entity.
+Join-table columns are not checked against the database, because the join
+table has no entity. A misspelt key or `Via` `orderBy` column fails when the
+relation is first loaded.
 
 ## Reading metadata
 

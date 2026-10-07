@@ -48,6 +48,18 @@ final class MappingException extends InvalidArgumentException
         return new self(sprintf('Entity "%s" maps column "%s" more than once', $className, $column));
     }
 
+    public static function invalidJoinColumn(string $className, string $relation, string $table, string $column): self
+    {
+        return new self(sprintf(
+            'Relation %s::$%s orders by "%s" on join table "%s"; it must be a plain column name '
+                . '(letters, digits and underscores, not starting with a digit)',
+            $className,
+            $relation,
+            $column,
+            $table,
+        ));
+    }
+
     public static function invalidOrderDirection(string $className, string $relation, string $direction): self
     {
         return new self(sprintf(

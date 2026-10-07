@@ -10,7 +10,9 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Shared fixture data for relation tests: three users, their orders,
- * profiles, tags, a membership with permissions and tickets.
+ * profiles, tags, a membership with permissions and tickets, and albums
+ * whose photos are ordered by the join table's `sequence`, which
+ * disagrees with the photos' own `sequence`.
  */
 abstract class AbstractRelationTestCase extends TestCase
 {
@@ -51,6 +53,9 @@ abstract class AbstractRelationTestCase extends TestCase
             "INSERT INTO crm.memberships VALUES (1, 2, 'owner', '{}')",
             "INSERT INTO crm.permissions VALUES (1, 1, 2, 'write'), (2, 1, 2, 'read'), (3, 1, 3, 'other')",
             'INSERT INTO tickets VALUES (1, 1), (2, 99)',
+            "INSERT INTO albums VALUES (1, 'Summer'), (2, 'Winter'), (3, 'Empty')",
+            "INSERT INTO photos VALUES (1, 'alpha', 10), (2, 'gamma', 30), (3, 'beta', 20)",
+            'INSERT INTO album_photo VALUES (1, 1, 1), (1, 2, 1), (1, 3, 2), (2, 1, 3), (2, 2, 1), (2, 3, 2)',
         );
         $this->em = new EntityManager($this->adapter);
     }

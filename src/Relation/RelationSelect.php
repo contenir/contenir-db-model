@@ -15,7 +15,8 @@ use function implode;
 /**
  * Builds the select that loads a relation's targets for a set of owner
  * key tuples. Join-table relations select the join's owner columns under
- * {@see self::OWNER_ALIAS} aliases so rows can be grouped back to owners.
+ * {@see self::OWNER_ALIAS} aliases so rows can be grouped back to owners,
+ * and order by the join table's columns before the target's.
  *
  * @internal
  */
@@ -56,6 +57,9 @@ final readonly class RelationSelect
     }
 
     /**
+     * Joins the join table and orders by its columns, ahead of any target
+     * ordering added afterwards.
+     *
      * @template T of object
      *
      * @param EntityMetadata<T> $target
@@ -79,6 +83,10 @@ final readonly class RelationSelect
         }
 
         $select->join($join->table, implode(' AND ', $on), $aliases);
+
+        foreach ($join->orderBy as $column => $direction) {
+            $select->order(["{$join->table}.{$column}" => $direction]);
+        }
 
         return self::qualify($join->table, $join->localColumns);
     }
