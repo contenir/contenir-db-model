@@ -19,7 +19,7 @@ final readonly class ManyToMany implements RelationInterface
 {
     /**
      * @param class-string                $target
-     * @param array<string, 'ASC'|'DESC'> $orderBy
+     * @param array<string, 'ASC'|'DESC'|'asc'|'desc'> $orderBy
      * @param array<string, scalar|null>  $where
      */
     public function __construct(
