@@ -40,6 +40,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Relation `orderBy` docblock types on `HasOne`, `HasMany`, `ManyToMany` and
   `Via` now accept lower-case `'asc'`/`'desc'`, matching the runtime, which
   has always treated directions case-insensitively.
+- Mutation tests for `src/Metadata/` now reach 100% covered-code MSI. The
+  metadata cache write and duplicate-column detection were restructured so
+  their equivalent mutants no longer apply; behaviour is unchanged.
 - Internal: relation code is now fully covered by mutation tests. The
   per-class `RelationBinding` cache in `RelationInitializer` is gone (a
   binding is a stateless two-reference object, so behaviour is unchanged).
