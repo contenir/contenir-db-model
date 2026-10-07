@@ -14,8 +14,8 @@ jobs:
       enable-codecov: true
       coverage-php-version: "8.4"
       enable-infection: true
-      min-msi: "90"
-      min-covered-msi: "90"
+      min-msi: "100"
+      min-covered-msi: "100"
 
   integration-databases:
     name: "Integration (${{ matrix.db }} | PHP ${{ matrix.php }})"
