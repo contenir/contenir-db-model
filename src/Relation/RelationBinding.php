@@ -14,8 +14,7 @@ use Contenir\Db\Model\Metadata\EntityMetadata;
 
 /**
  * What {@see RelationResolver} needs to load a managed entity's relation:
- * the owning entity manager's initializer and the entity's metadata. One
- * instance is shared by every managed entity of a class.
+ * the owning entity manager's initializer and the entity's metadata.
  *
  * @internal
  */

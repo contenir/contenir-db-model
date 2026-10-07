@@ -33,6 +33,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Relation `orderBy` docblock types on `HasOne`, `HasMany`, `ManyToMany` and
   `Via` now accept lower-case `'asc'`/`'desc'`, matching the runtime, which
   has always treated directions case-insensitively.
+- Internal: relation code is now fully covered by mutation tests. The
+  per-class `RelationBinding` cache in `RelationInitializer` is gone (a
+  binding is a stateless two-reference object, so behaviour is unchanged).
 
 ## [2.0.0] - Unreleased
 

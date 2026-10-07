@@ -195,12 +195,45 @@ final class LazyLoadingTest extends AbstractRelationTestCase
     }
 
     #[Test]
+    public function refreshPreparesCollectionsAsLazyAgain(): void
+    {
+        $user = $this->user(2);
+        count($user->orders);
+
+        $this->em->refresh($user);
+
+        static::assertFalse($user->orders->isLoaded());
+    }
+
+    #[Test]
     public function relationOfEntityBuiltWithNewIsUninitialised(): void
     {
         $this->expectException(Error::class);
         $this->expectExceptionMessage('must not be accessed before initialization');
 
         EntityFactory::user()->profile;
+    }
+
+    #[Test]
+    public function relationsAfterAnAssignedOneStillBecomeLazy(): void
+    {
+        $user         = EntityFactory::user('new@example.com');
+        $user->orders = Collection::of([]);
+        $this->em->save($user);
+
+        static::assertFalse($user->tags->isLoaded());
+    }
+
+    #[Test]
+    public function singleRelationIsStoredOnTheEntityAfterTheFirstRead(): void
+    {
+        $user    = $this->user(1);
+        $queries = $this->queryCount();
+
+        $first  = $user->profile;
+        $second = $user->profile;
+
+        static::assertSame([$first, 1], [$second, $this->queryCount() - $queries]);
     }
 
     #[Test]
