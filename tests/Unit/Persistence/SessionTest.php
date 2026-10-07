@@ -19,6 +19,44 @@ use PHPUnit\Framework\TestCase;
 final class SessionTest extends TestCase
 {
     #[Test]
+    public function clearForgetsEveryEntityAndItsSnapshot(): void
+    {
+        $session  = Session::create(TypeRegistry::withDefaults());
+        $metadata = (new AttributeMetadataFactory())->getMetadataFor(Tag::class);
+        $tag      = EntityFactory::tag();
+        $tag->id  = 1;
+        $session->register($metadata, $tag, ['id' => 1]);
+
+        $session->clear();
+
+        static::assertSame([false, null], [$session->identityMap->contains($tag), $session->tracker->snapshotOf($tag)]);
+    }
+
+    #[Test]
+    public function detachForgetsOnlyThatEntityAndItsSnapshot(): void
+    {
+        $session   = Session::create(TypeRegistry::withDefaults());
+        $metadata  = (new AttributeMetadataFactory())->getMetadataFor(Tag::class);
+        $tag       = EntityFactory::tag();
+        $tag->id   = 1;
+        $other     = EntityFactory::tag('other');
+        $other->id = 2;
+        $session->register($metadata, $tag, ['id' => 1]);
+        $session->register($metadata, $other, ['id' => 2]);
+
+        $session->detach($tag);
+
+        static::assertSame(
+            [false, null, true],
+            [
+                $session->identityMap->contains($tag),
+                $session->tracker->snapshotOf($tag),
+                $session->identityMap->contains($other),
+            ],
+        );
+    }
+
+    #[Test]
     public function persistedIdentifierPrefersSnapshotOverCurrentProperties(): void
     {
         $session  = Session::create(TypeRegistry::withDefaults());

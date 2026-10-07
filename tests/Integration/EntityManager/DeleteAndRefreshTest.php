@@ -90,6 +90,19 @@ final class DeleteAndRefreshTest extends TestCase
     }
 
     #[Test]
+    public function deleteOfVersionedEntityIsGuardedByKeyAndVersion(): void
+    {
+        $first  = EntityFactory::widget('first');
+        $second = EntityFactory::widget('second');
+        $this->em->save($first);
+        $this->em->save($second);
+
+        $this->em->delete($first);
+
+        static::assertSame([['name' => 'second']], $this->fetchAll('SELECT name FROM widgets'));
+    }
+
+    #[Test]
     public function deleteRemovesRowAndStopsManagingEntity(): void
     {
         $user = EntityFactory::user();

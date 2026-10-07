@@ -107,6 +107,37 @@ final class TransactionalTest extends TestCase
     }
 
     #[Test]
+    public function rollbackOfRefreshRestoresVersionHeldBeforeIt(): void
+    {
+        $widget = EntityFactory::widget();
+        $this->em->save($widget);
+        $this->pdo->exec('UPDATE widgets SET version = 5');
+
+        $this->failingWith(fn() => $this->em->refresh($widget));
+
+        static::assertSame(1, $widget->version);
+    }
+
+    #[Test]
+    public function rollbackReplaysRepeatedWritesNewestFirst(): void
+    {
+        $widget = EntityFactory::widget('one');
+        $this->em->save($widget);
+
+        $this->failingWith(function () use ($widget): void {
+            $widget->name = 'two';
+            $this->em->save($widget);
+            $widget->name = 'three';
+            $this->em->save($widget);
+        });
+
+        static::assertSame(
+            [1, [['name' => 'one', 'version' => 1]]],
+            [$widget->version, $this->fetchAll('SELECT name, version FROM widgets')],
+        );
+    }
+
+    #[Test]
     public function rollbackRestoresSnapshotAndVersionOfUpdatedEntity(): void
     {
         $widget = EntityFactory::widget('before');
