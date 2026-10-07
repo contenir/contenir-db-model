@@ -10,8 +10,6 @@ use ReflectionClass;
 use ReflectionException;
 use ReflectionProperty;
 
-use function array_key_exists;
-
 /**
  * Instantiates entities without their constructor and reads or writes
  * properties of any visibility. Reflection is created against each
@@ -23,7 +21,7 @@ use function array_key_exists;
 final class PropertyAccessor
 {
     /**
-     * @var array<string, ReflectionProperty>
+     * @var array<class-string, array<string, ReflectionProperty>>
      */
     private array $properties = [];
 
@@ -92,7 +90,7 @@ final class PropertyAccessor
             unset($this->{$name});
         };
 
-        Closure::bind($unset, $entity, $declaring)?->__invoke($property);
+        Closure::bind($unset, $entity, $declaring)->__invoke($property);
     }
 
     /**
@@ -108,15 +106,18 @@ final class PropertyAccessor
      */
     private function property(object $entity, string $property): ReflectionProperty
     {
-        $key = $entity::class . '::' . $property;
-        if (array_key_exists($key, $this->properties)) {
-            return $this->properties[$key];
-        }
+        return $this->properties[$entity::class][$property] ??= $this->reflect($entity, $property);
+    }
 
+    /**
+     * @throws HydrationException
+     */
+    private function reflect(object $entity, string $property): ReflectionProperty
+    {
         try {
             $declaring = (new ReflectionProperty($entity, $property))->getDeclaringClass()->getName();
 
-            return $this->properties[$key] = new ReflectionProperty($declaring, $property);
+            return new ReflectionProperty($declaring, $property);
         } catch (ReflectionException $e) {
             throw HydrationException::inaccessibleProperty($entity::class, $property, $e);
         }

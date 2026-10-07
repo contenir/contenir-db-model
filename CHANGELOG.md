@@ -16,6 +16,13 @@ adheres to [Semantic Versioning](https://semver.org/).
   `order` strings naming the `via` table map to this. `JoinTable` gains a
   matching `orderBy`. Relations without it are unchanged.
 
+### Changed
+
+- Internal hardening with no behaviour change: more tests pin down hydration,
+  identity-map and type-conversion behaviour, and a few equivalent code
+  paths were simplified (`FloatType`, `PropertyAccessor`'s reflection cache,
+  `IdentityMap` keys, `EntityHydrator::refresh()`).
+
 ### Fixed
 
 - `CachedMetadataFactory` keys no longer contain dots. They are now
