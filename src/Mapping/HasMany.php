@@ -23,7 +23,7 @@ final readonly class HasMany implements RelationInterface
      * @param class-string                $target
      * @param string|list<string>         $foreignKey
      * @param string|list<string>|null    $localKey
-     * @param array<string, 'ASC'|'DESC'> $orderBy
+     * @param array<string, 'ASC'|'DESC'|'asc'|'desc'> $orderBy
      * @param array<string, scalar|null>  $where
      */
     public function __construct(

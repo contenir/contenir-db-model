@@ -27,7 +27,7 @@ final readonly class Via
      * @param string|list<string>         $relatedKey
      * @param string|list<string>|null    $localKey
      * @param string|list<string>|null    $targetKey
-     * @param array<string, 'ASC'|'DESC'> $orderBy    join-table column => direction
+     * @param array<string, 'ASC'|'DESC'|'asc'|'desc'> $orderBy    join-table column => direction
      *
      * @mago-expect lint:excessive-parameter-list Attribute arguments are passed by name; all but three are optional.
      */
