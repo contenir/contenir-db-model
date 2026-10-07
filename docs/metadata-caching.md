@@ -41,9 +41,10 @@ values are small and read on every request.
   treated as a miss. An unusable key is a configuration error, and
   swallowing it would silently disable caching.
 - **Best-effort.** A cache read that throws any other PSR-16
-  `CacheException` counts as a miss. A failed write is ignored, and the freshly built metadata is
-  still returned. An entry that isn't `EntityMetadata` for the requested
-  class is also a miss, and gets rebuilt and overwritten.
+  `CacheException` counts as a miss. A failed write is ignored, and the
+  freshly built metadata is still returned. An entry that isn't
+  `EntityMetadata` for the requested class is also a miss, and gets
+  rebuilt and overwritten.
 - **Mapping errors are not cached.** If the inner factory throws
   `MappingException`, nothing is written, and the exception propagates.
 
