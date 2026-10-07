@@ -23,8 +23,9 @@ use function md5;
  * a failing backend, or an entry that does not hold metadata for the
  * requested class, is a miss and metadata is rebuilt from the inner
  * factory. A key the backend rejects (PSR-16 `InvalidArgumentException`)
- * is a configuration error and propagates. Entries are not invalidated when entity classes change; clear
- * the cache on deploy, or omit this decorator in development.
+ * is a configuration error and propagates. Entries are not invalidated
+ * when entity classes change; clear the cache on deploy, or omit this
+ * decorator in development.
  *
  * @api
  */
