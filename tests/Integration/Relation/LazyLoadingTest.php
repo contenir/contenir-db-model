@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ContenirTest\Db\Model\Integration\Relation;
 
 use Contenir\Db\Model\Collection;
+use Contenir\Db\Model\EntityManager;
 use Contenir\Db\Model\Exception\RelationException;
 use Contenir\Db\Model\Relation\LazyRelationsTrait;
 use Contenir\Db\Model\Relation\OwnerPredicate;
@@ -29,6 +30,7 @@ use PHPUnit\Framework\Attributes\Test;
 
 use function count;
 
+#[CoversClass(EntityManager::class)]
 #[CoversClass(RelationInitializer::class)]
 #[CoversClass(RelationLoader::class)]
 #[CoversClass(RelationSelect::class)]

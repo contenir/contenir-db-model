@@ -102,6 +102,14 @@ final class PreloadTest extends AbstractRelationTestCase
     }
 
     #[Test]
+    public function noEntitiesSkipsPathResolution(): void
+    {
+        $this->em->getRepository(User::class)->preload([], 'invoices');
+
+        static::assertSame(0, $this->queryCount());
+    }
+
+    #[Test]
     public function nothingToPreloadIsANoOp(): void
     {
         $queries = $this->queryCount();
