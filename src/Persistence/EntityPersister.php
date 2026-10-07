@@ -31,48 +31,6 @@ final readonly class EntityPersister
     ) {}
 
     /**
-     * Insert every initialised column. A generated identifier that is still
-     * null is left to the database and written back afterwards.
-     *
-     * @template T of object
-     *
-     * @param EntityMetadata<T> $metadata
-     * @param T                 $entity
-     *
-     * @throws HydrationException
-     * @throws IdentityConflictException
-     * @throws PersistenceException
-     * @throws TypeConversionException
-     */
-    public function insert(EntityMetadata $metadata, object $entity): void
-    {
-        $values    = $this->session->hydrator->extract($metadata, $entity);
-        $generated = $metadata->generatedIdentifier;
-        if (null !== $generated && null !== ($values[$generated->columnName] ?? null)) {
-            $generated = null;
-        }
-
-        if (null !== $generated) {
-            unset($values[$generated->columnName]);
-        }
-
-        $identifier = null === $generated ? $this->session->requireIdentifier('insert', $metadata, $entity) : null;
-
-        $this->journal->record($metadata, $entity);
-        $raw = $this->statements->insert($metadata->getTableIdentifier(), $values)->getGeneratedValue();
-        if (null !== $generated) {
-            $this->assignGenerated($metadata, $entity, $generated, $raw);
-        }
-
-        $this->session->register(
-            $metadata,
-            $entity,
-            $identifier ?? $this->session->requireIdentifier('insert', $metadata, $entity),
-        );
-        $this->relations->initialize($metadata, $entity);
-    }
-
-    /**
      * Update a managed entity; insert anything else.
      *
      * @template T of object
@@ -98,6 +56,84 @@ final readonly class EntityPersister
     }
 
     /**
+     * @template T of object
+     *
+     * @param EntityMetadata<T> $metadata
+     * @param T                 $entity
+     *
+     * @throws HydrationException
+     * @throws PersistenceException
+     * @throws TypeConversionException
+     */
+    private function assignGenerated(
+        EntityMetadata $metadata,
+        object $entity,
+        FieldMetadata $generated,
+        string|int|false|null $raw,
+    ): void {
+        if (null === $raw || false === $raw) {
+            throw PersistenceException::missingGeneratedValue($metadata->className, $generated->propertyName);
+        }
+
+        $this->session->hydrator->assign($entity, $generated->propertyName, $this->types->toPhp($generated, $raw));
+    }
+
+    /**
+     * Insert every initialised column. A generated identifier that is still
+     * null is left to the database and written back afterwards.
+     *
+     * @template T of object
+     *
+     * @param EntityMetadata<T> $metadata
+     * @param T                 $entity
+     *
+     * @throws HydrationException
+     * @throws IdentityConflictException
+     * @throws PersistenceException
+     * @throws TypeConversionException
+     */
+    private function insert(EntityMetadata $metadata, object $entity): void
+    {
+        $values    = $this->session->hydrator->extract($metadata, $entity);
+        $generated = $metadata->generatedIdentifier;
+        if (null !== $generated && null !== ($values[$generated->columnName] ?? null)) {
+            $generated = null;
+        }
+
+        if (null !== $generated) {
+            unset($values[$generated->columnName]);
+        }
+
+        if (null === $generated) {
+            $this->session->requireIdentifier('insert', $metadata, $entity);
+        }
+
+        $raw = $this->write($metadata, $entity, $values);
+        if (null !== $generated) {
+            $this->assignGenerated($metadata, $entity, $generated, $raw);
+        }
+
+        $this->manage($metadata, $entity);
+    }
+
+    /**
+     * @template T of object
+     *
+     * @param EntityMetadata<T> $metadata
+     * @param T                 $entity
+     *
+     * @throws HydrationException
+     * @throws IdentityConflictException
+     * @throws PersistenceException
+     * @throws TypeConversionException
+     */
+    private function manage(EntityMetadata $metadata, object $entity): void
+    {
+        $this->session->register($metadata, $entity, $this->session->requireIdentifier('insert', $metadata, $entity));
+        $this->relations->initialize($metadata, $entity);
+    }
+
+    /**
      * Write the columns changed since the last snapshot. Nothing is sent
      * when nothing changed. With a #[Version] field the update is guarded
      * by the loaded version and bumps it.
@@ -113,7 +149,7 @@ final readonly class EntityPersister
      * @throws StaleEntityException
      * @throws TypeConversionException
      */
-    public function update(EntityMetadata $metadata, object $entity): void
+    private function update(EntityMetadata $metadata, object $entity): void
     {
         $changes = $this->session->tracker->changes($metadata, $entity);
         if ([] === $changes) {
@@ -139,25 +175,21 @@ final readonly class EntityPersister
     }
 
     /**
+     * Journal the entity, then run the INSERT.
+     *
      * @template T of object
      *
-     * @param EntityMetadata<T> $metadata
-     * @param T                 $entity
+     * @param EntityMetadata<T>                                       $metadata
+     * @param T                                                       $entity
+     * @param array<string, int|float|string|bool|null> $values
      *
      * @throws HydrationException
      * @throws PersistenceException
-     * @throws TypeConversionException
      */
-    private function assignGenerated(
-        EntityMetadata $metadata,
-        object $entity,
-        FieldMetadata $generated,
-        string|int|false|null $raw,
-    ): void {
-        if (null === $raw || false === $raw) {
-            throw PersistenceException::missingGeneratedValue($metadata->className, $generated->propertyName);
-        }
+    private function write(EntityMetadata $metadata, object $entity, array $values): string|int|false|null
+    {
+        $this->journal->record($metadata, $entity);
 
-        $this->session->hydrator->assign($entity, $generated->propertyName, $this->types->toPhp($generated, $raw));
+        return $this->statements->insert($metadata->getTableIdentifier(), $values)->getGeneratedValue();
     }
 }

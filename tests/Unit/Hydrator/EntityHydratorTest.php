@@ -69,6 +69,18 @@ final class EntityHydratorTest extends TestCase
     }
 
     #[Test]
+    public function extractsLaterColumnsAfterAnUninitialisedOne(): void
+    {
+        $order        = new Order();
+        $order->total = 1250;
+
+        static::assertSame(
+            ['id' => null, 'total' => 1250, 'status' => 'pending'],
+            $this->hydrator->extract($this->metadata->getMetadataFor(Order::class), $order),
+        );
+    }
+
+    #[Test]
     public function hydratesConvertedValuesIntoPropertiesByColumn(): void
     {
         $order = $this->hydrator->hydrate($this->metadata->getMetadataFor(Order::class), [
@@ -83,6 +95,18 @@ final class EntityHydratorTest extends TestCase
             [5, 9, 1250, OrderStatus::Shipped, new DateTimeImmutable('2024-03-04 05:06:07')],
             [$order->id, $order->userId, $order->total, $order->status, $order->placedAt],
         );
+    }
+
+    #[Test]
+    public function hydratesLaterColumnsAfterOneMissingFromRow(): void
+    {
+        $order = $this->hydrator->hydrate($this->metadata->getMetadataFor(Order::class), [
+            'id'     => 5,
+            'total'  => 1250,
+            'status' => 'shipped',
+        ]);
+
+        static::assertSame([5, 1250, OrderStatus::Shipped], [$order->id, $order->total, $order->status]);
     }
 
     #[Test]
@@ -106,6 +130,22 @@ final class EntityHydratorTest extends TestCase
         $this->hydrator->refresh($metadata, $membership, ['group_id' => '1', 'user_id' => 2, 'role' => 'owner']);
 
         static::assertSame([1, 2, 'owner'], [$membership->groupId, $membership->userId, $membership->role]);
+    }
+
+    #[Test]
+    public function refreshesLaterColumnsAfterOneMissingFromRow(): void
+    {
+        $metadata = $this->metadata->getMetadataFor(Order::class);
+        $order    = $this->hydrator->hydrate($metadata, [
+            'id'      => 5,
+            'user_id' => 9,
+            'total'   => 1,
+            'status'  => 'pending',
+        ]);
+
+        $this->hydrator->refresh($metadata, $order, ['id' => 5, 'total' => 2, 'status' => 'shipped']);
+
+        static::assertSame([9, 2, OrderStatus::Shipped], [$order->userId, $order->total, $order->status]);
     }
 
     #[Test]

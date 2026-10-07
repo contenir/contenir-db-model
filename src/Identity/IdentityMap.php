@@ -46,7 +46,7 @@ final class IdentityMap
      */
     private static function key(string $className, array $identifier): string
     {
-        return $className . "\0" . serialize($identifier);
+        return serialize([$className, $identifier]);
     }
 
     /**
