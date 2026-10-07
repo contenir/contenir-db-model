@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace ContenirTest\Db\Model\Unit\Persistence;
 
+use Contenir\Db\Model\Metadata\AttributeMetadataFactory;
 use Contenir\Db\Model\Persistence\Session;
 use Contenir\Db\Model\Persistence\TransactionManager;
 use Contenir\Db\Model\Persistence\WriteJournal;
 use Contenir\Db\Model\Type\TypeRegistry;
+use ContenirTest\Db\Model\TestAsset\Entity\Revision;
 use PhpDb\Adapter\AdapterInterface;
 use PhpDb\Adapter\Driver\ConnectionInterface;
 use PhpDb\Adapter\Driver\DriverInterface;
@@ -30,6 +32,23 @@ final class TransactionManagerTest extends TestCase
         $connection->expects(static::once())->method('commit');
 
         static::assertSame('ok', $this->managerFor($connection)->transactional(static fn(): string => 'ok'));
+    }
+
+    #[Test]
+    public function commitDiscardsJournaledWritesSoLaterRollbackIsHarmless(): void
+    {
+        $session  = Session::create(TypeRegistry::withDefaults());
+        $journal  = new WriteJournal($session);
+        $metadata = (new AttributeMetadataFactory())->getMetadataFor(Revision::class);
+        $revision = new Revision();
+
+        $this->managerFor($this->connection([false]), $journal)->transactional(
+            static fn() => $journal->record($metadata, $revision),
+        );
+        $revision->version = 7;
+        $journal->rollback();
+
+        static::assertSame(7, $revision->version);
     }
 
     #[Test]
@@ -79,13 +98,16 @@ final class TransactionManagerTest extends TestCase
     /**
      * @param list<bool> $inTransaction successive answers to inTransaction()
      */
-    private function managerFor(ConnectionInterface $connection): TransactionManager
+    private function managerFor(ConnectionInterface $connection, ?WriteJournal $journal = null): TransactionManager
     {
         $driver = $this->createStub(DriverInterface::class);
         $driver->method('getConnection')->willReturn($connection);
         $adapter = $this->createStub(AdapterInterface::class);
         $adapter->method('getDriver')->willReturn($driver);
 
-        return new TransactionManager($adapter, new WriteJournal(Session::create(TypeRegistry::withDefaults())));
+        return new TransactionManager(
+            $adapter,
+            $journal ?? new WriteJournal(Session::create(TypeRegistry::withDefaults())),
+        );
     }
 }
