@@ -9,6 +9,7 @@ use Contenir\Db\Model\Hydrator\PropertyAccessor;
 use ContenirTest\Db\Model\TestAsset\Entity\Note;
 use ContenirTest\Db\Model\TestAsset\Entity\User;
 use ContenirTest\Db\Model\TestAsset\Entity\Widget;
+use ContenirTest\Db\Model\TestAsset\Mapping\UntypedColumnEntity;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
@@ -20,6 +21,12 @@ use PHPUnit\Framework\TestCase;
 final class PropertyAccessorTest extends TestCase
 {
     private PropertyAccessor $accessor;
+
+    #[Test]
+    public function allowsNullForUntypedProperty(): void
+    {
+        static::assertTrue($this->accessor->allowsNull(new UntypedColumnEntity(), 'value'));
+    }
 
     #[Test]
     public function initialisesReadonlyPropertyDeclaredOnParentClass(): void
@@ -34,6 +41,25 @@ final class PropertyAccessorTest extends TestCase
     public function instantiatesWithoutCallingConstructor(): void
     {
         static::assertInstanceOf(Note::class, $this->accessor->instantiate(Note::class));
+    }
+
+    #[Test]
+    public function readsSameNamedPropertyOfDifferentClassesRepeatedly(): void
+    {
+        $user       = new User();
+        $user->id   = 1;
+        $widget     = new Widget();
+        $widget->id = 2;
+
+        static::assertSame(
+            [1, 2, 1, 2],
+            [
+                $this->accessor->get($user, 'id'),
+                $this->accessor->get($widget, 'id'),
+                $this->accessor->get($user, 'id'),
+                $this->accessor->get($widget, 'id'),
+            ],
+        );
     }
 
     #[Test]
