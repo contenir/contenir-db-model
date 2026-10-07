@@ -24,6 +24,7 @@
     },
     "require-dev": {
         "contenir/contenir-qa-tools": "0.1.x-dev",
+        "infection/infection": "^0.34.1",
         "php-db/phpdb-mysql": "^0.4.0",
         "php-db/phpdb-pgsql": "0.1.x-dev",
         "php-db/phpdb-sqlite": "^0.2.0",
@@ -45,7 +46,10 @@
         "platform": {
             "php": "8.3.99"
         },
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "infection/extension-installer": true
+        }
     },
     "extra": {
         "laminas": {
@@ -72,7 +76,8 @@
         "test": "phpunit --colors=always --testsuite unit",
         "test-coverage": "phpunit --colors=always --coverage-clover clover.xml",
         "test-integration": "phpunit --colors=always --testsuite integration",
-        "test-coverage-branches": "@php bin/coverage-branches.php"
+        "test-coverage-branches": "@php bin/coverage-branches.php",
+        "mutation-test": "infection"
     },
     "scripts-descriptions": {
         "test-coverage-branches": "Line, branch and path coverage across both suites (needs Xdebug); works around Xdebug path-coverage crashes"
