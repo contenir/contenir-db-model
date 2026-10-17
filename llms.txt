@@ -50,7 +50,7 @@ These no longer exist in 2.x. Use the replacement:
 - [Repositories and finders](docs/repositories.md): finder methods, criteria rules, streaming, custom selects, custom repository subclasses
 - [Persisting entities](docs/persistence.md): EntityManager API, insert/update rules, optimistic locking, transactions and rollback behaviour
 - [Identity map](docs/identity-map.md): instance sharing, key normalisation, required primary-key columns, clearing in workers
-- [Entity lifecycle](docs/entity-lifecycle.md): how rows become entities, refresh rules for readonly properties, snapshot-based change tracking
+- [Entity lifecycle](docs/entity-lifecycle.md): how rows become entities, refresh rules for readonly properties, `RowValues` for entities from rows without the database, snapshot-based change tracking
 
 ## Source
 

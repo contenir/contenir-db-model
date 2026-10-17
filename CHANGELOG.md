@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Entities from rows without the database.** `RowValues` builds a new
+  entity from a row (`fromRow()`), or a copy of an entity with a row's
+  values in place of its own (`withRow()`), converting each column as a
+  loaded row would be. Neither is managed and nothing is read or written:
+  for showing a change before it is saved, such as a CMS preview.
 - **Ordering many-to-many relations by join-table columns.** `Via` takes an
   `orderBy` of join-table column => `ASC`/`DESC`, such as a link's
   `sequence`, applied before the relation's own `orderBy` on target columns

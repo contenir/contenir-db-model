@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Contenir\Db\Model\Query;
 
+use Contenir\Db\Model\Hydrator\EntityHydrator;
 use Contenir\Db\Model\Identity\IdentityMap;
 use Contenir\Db\Model\Metadata\MetadataFactoryInterface;
 use Contenir\Db\Model\Relation\Preloader;
@@ -16,11 +17,15 @@ use Contenir\Db\Model\Relation\Preloader;
  */
 final readonly class QueryContext
 {
+    /**
+     * @mago-expect lint:excessive-parameter-list One property per collaborator the entity manager shares.
+     */
     public function __construct(
         public MetadataFactoryInterface $metadata,
         public EntityReader $reader,
         public CriteriaTranslator $criteria,
         public IdentityMap $identityMap,
         public Preloader $preloader,
+        public EntityHydrator $hydrator,
     ) {}
 }

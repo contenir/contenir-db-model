@@ -48,6 +48,31 @@ new one:
   value is the same. If the stored value differs, `HydrationException` is
   thrown, because a readonly property cannot change once set.
 
+## Rows without the database
+
+`RowValues` builds entities from rows you already have, converting each
+column exactly as a loaded row would be, without reading or writing the
+database. Neither result is managed by the `EntityManager`.
+
+```php
+use Contenir\Db\Model\RowValues;
+
+$values = new RowValues($em);
+
+// A new entity from a row; saving it inserts it like any new entity
+$order = $values->fromRow(Order::class, ['user_id' => '1', 'total' => '250', 'status' => 'shipped']);
+
+// A copy of a loaded entity with the row's values in place of its own
+$preview = $values->withRow($page, ['title' => 'Spa Rituals', 'active' => 'pending']);
+```
+
+`withRow()` is for showing a change before it is saved, such as a CMS
+preview of a record's unsaved values. The copy shares the original's
+relations; the original, the identity map and the database are left as
+they were. Columns are keyed by column name, unmapped columns are
+ignored, and a row that changes a set `readonly` property throws
+`HydrationException`, as a refresh would.
+
 ## Change tracking
 
 When an entity is loaded or saved, a **snapshot** of its column values is
