@@ -97,8 +97,8 @@ Read in this order:
    `preload()`, ordering by join-table columns
 6. [Identity map](docs/identity-map.md): one object per row, and memory in
    long-running processes
-7. [Entity lifecycle](docs/entity-lifecycle.md): hydration, refresh and
-   change tracking in detail
+7. [Entity lifecycle](docs/entity-lifecycle.md): hydration, refresh,
+   entities from rows without the database, and change tracking in detail
 8. [Sensitive data](docs/sensitive-data.md): `SensitiveString` and
    redaction
 9. [Metadata caching](docs/metadata-caching.md): PSR-16 cache for

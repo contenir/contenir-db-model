@@ -97,6 +97,7 @@ final class EntityManager
             new CriteriaTranslator($types),
             $this->session->identityMap,
             new Preloader($this->metadata, $relationLoader, $relations),
+            $this->session->hydrator,
         );
     }
 
