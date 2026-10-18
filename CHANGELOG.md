@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [2.0.0-rc4] - Unreleased
+## [2.0.0-rc5] - Unreleased
 
 ### Added
 
@@ -13,6 +13,11 @@ adheres to [Semantic Versioning](https://semver.org/).
   values in place of its own (`withRow()`), converting each column as a
   loaded row would be. Neither is managed and nothing is read or written:
   for showing a change before it is saved, such as a CMS preview.
+
+## [2.0.0-rc4] - 2026-10-07
+
+### Added
+
 - **Ordering many-to-many relations by join-table columns.** `Via` takes an
   `orderBy` of join-table column => `ASC`/`DESC`, such as a link's
   `sequence`, applied before the relation's own `orderBy` on target columns
