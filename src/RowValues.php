@@ -17,7 +17,8 @@ use Contenir\Db\Model\Metadata\MetadataFactoryInterface;
  * by the {@see EntityManager}, and nothing is read or written.
  *
  * For showing a change before it is saved, such as a CMS preview of a
- * record's unsaved values:
+ * record's unsaved values, or for reading an entity's columns by the names
+ * a site's configuration gives them:
  *
  *     $values  = new RowValues($em);
  *     $preview = $values->withRow($page, ['title' => 'Spa Rituals', 'active' => 'pending']);
@@ -56,6 +57,21 @@ final readonly class RowValues
     public function fromRow(string $className, array $row): object
     {
         return $this->hydrator->hydrate($this->metadata->getMetadataFor($className), $row);
+    }
+
+    /**
+     * The entity's mapped columns as a row, keyed by column name, each as
+     * saving would write it. A property not yet set is left out.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws HydrationException
+     * @throws MappingException
+     * @throws TypeConversionException
+     */
+    public function of(object $entity): array
+    {
+        return $this->hydrator->extract($this->metadata->getMetadataFor($entity::class), $entity);
     }
 
     /**

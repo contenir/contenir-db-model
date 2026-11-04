@@ -4,7 +4,14 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [2.0.0-rc5] - Unreleased
+## [2.0.0-rc6] - 2026-11-04
+
+### Added
+
+- `RowValues::of()`: an entity's mapped columns as a row, keyed by column name, each as saving would write it, for
+  code that names columns, as a site's admin.xml does. A property not yet set is left out.
+
+## [2.0.0-rc5] - 2026-10-18
 
 ### Added
 
