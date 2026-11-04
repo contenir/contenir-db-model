@@ -17,7 +17,9 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function array_key_exists;
 use function array_map;
+use function substr;
 
 /**
  * Entities from rows without the database: new ones, and copies of loaded
@@ -92,6 +94,21 @@ final class RowValuesTest extends TestCase
     }
 
     #[Test]
+    public function leavesAPropertyNotYetSetOutOfTheRow(): void
+    {
+        $user       = new User();
+        $user->name = 'Carol';
+
+        $row = (new RowValues($this->entityManager()))->of($user);
+
+        static::assertSame(['Carol', false, false], [
+            $row['name'] ?? null,
+            array_key_exists('email', $row),
+            array_key_exists('created_at', $row),
+        ]);
+    }
+
+    #[Test]
     public function leavesColumnsTheRowDoesNotNameAsTheyWere(): void
     {
         $em   = $this->entityManager();
@@ -101,6 +118,27 @@ final class RowValuesTest extends TestCase
         $copy = (new RowValues($em))->withRow($user, ['unmapped' => 'ignored']);
 
         static::assertSame(['a@example.com', 'Alice'], [$copy->email, $copy->name]);
+    }
+
+    #[Test]
+    public function readsAnEntitysColumnsAsARowKeyedByColumnName(): void
+    {
+        $em   = $this->entityManager();
+        $user = $em->getRepository(User::class)->find(1);
+        static::assertInstanceOf(User::class, $user);
+
+        $row = (new RowValues($em))->of($user);
+
+        static::assertSame(
+            [1, 'a@example.com', 'Alice', '2024-01-01', false],
+            [
+                $row['id'] ?? null,
+                $row['email'] ?? null,
+                $row['name'] ?? null,
+                substr((string) ($row['created_at'] ?? ''), offset: 0, length: 10),
+                array_key_exists('transientNote', $row) || array_key_exists('orders', $row),
+            ],
+        );
     }
 
     #[Test]
